@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block title %}Отчёт о помощи{% endblock %}
+{% block content %}
+<h2 class="mt-4">Отчёт о помощи</h2>
+<form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Комментарий</label>
+        <textarea name="text" class="form-control" rows="4" required></textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Фотография</label>
+        <input type="file" name="photo" class="form-control">
+    </div>
+    <button type="submit" class="btn btn-primary">Отправить отчёт</button>
+</form>
+{% endblock %}

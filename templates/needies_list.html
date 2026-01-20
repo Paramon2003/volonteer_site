@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block title %}Нуждающиеся{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Все нуждающиеся</h1>
+
+    <div class="mb-3">
+        <a href="{{ url_for('needies_list', view='list') }}" class="btn btn-outline-primary">Список</a>
+        <a href="{{ url_for('needies_list', view='map') }}" class="btn btn-outline-primary">Карта</a>
+    </div>
+
+    <div class="row">
+        {% for needy in needies %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if needy[3] %}
+                <img src="/{{ needy[3] }}" class="img-thumbnail" alt="Фото">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ needy[1] }}</h5>
+                    <p class="card-text">{{ needy[4][:100] }}{% if needy[4]|length > 100 %}...{% endif %}</p>
+                    <p class="text-muted">{{ needy[2] }}</p>
+                    <a href="{{ url_for('needy_profile', id=needy[0]) }}" class="btn btn-primary">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

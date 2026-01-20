@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block title %}Профиль нуждающегося{% endblock %}
+{% block content %}
+<h2 class="mt-4">Профиль нуждающегося</h2>
+<div class="row">
+    <div class="col-md-4">
+        {% if needy[3] %}
+            <img src="/{{ needy[3] }}" class="img-thumbnail" alt="Фото">
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <h3>{{ needy[1] }}</h3>
+        <p><strong>Категория:</strong> {{ needy[2] }}</p>
+        <p><strong>Описание:</strong> {{ needy[4] }}</p>
+        <p><strong>Адрес:</strong> {{ needy[5] }}</p>
+        <p><strong>Собрано средств:</strong> {{ needy[6] }} ₽</p>
+        <p><strong>На что пойдёт помощь:</strong> {{ needy[7] }}</p>
+        <form method="POST" action="/donate/{{ needy[0] }}">
+            <div class="mb-2">
+                <input type="number" step="0.01" name="amount" placeholder="Сумма" class="form-control" required>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" name="subscription" value="1" class="form-check-input">
+                <label class="form-check-label">Оформить подписку</label>
+            </div>
+            <button type="submit" class="btn btn-success">Помочь</button>
+        </form>
+        <a href="/report/{{ needy[0] }}" class="btn btn-outline-primary mt-3">Я помог(ла) — оставить отчёт</a>
+    </div>
+</div>
+{% endblock %}

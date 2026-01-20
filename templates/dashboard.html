@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block title %}Личный кабинет{% endblock %}
+{% block content %}
+<h2 class="mt-4">Личный кабинет</h2>
+<div class="row mb-4">
+    <div class="col-md-3">
+        {% if user[1] %}
+            <img src="/{{ user[1] }}" class="img-thumbnail" alt="Фото профиля">
+        {% else %}
+            <img src="https://via.placeholder.com/150" class="img-thumbnail" alt="Фото профиля">
+        {% endif %}
+    </div>
+    <div class="col-md-9">
+        <h4>{{ user[0] }}</h4>
+        <p>Спасибо, что вы с нами! Ниже вы можете увидеть, как вы уже помогли.</p>
+    </div>
+</div>
+<hr>
+<h4>Мои отчёты о помощи</h4>
+{% if reports %}
+    <div class="row">
+        {% for r in reports %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    {% if r[2] %}
+                        <img src="/{{ r[2] }}" class="card-img-top" alt="Фото">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">Кому: {{ r[0] }}</h5>
+                        <p class="card-text">{{ r[1] }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>Пока нет отчетов. Попробуйте выполнить доброе дело!</p>
+{% endif %}
+{% endblock %}

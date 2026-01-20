@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block title %}Карта{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Карта нуждающихся в Воронеже</h1>
+
+    <div class="mb-3">
+        <a href="{{ url_for('needies_list', view='list') }}" class="btn btn-outline-primary">
+            <i class="bi bi-list-ul"></i> Список
+        </a>
+        <a href="{{ url_for('needies_list', view='map') }}" class="btn btn-primary">
+            <i class="bi bi-map"></i> Карта
+        </a>
+    </div>
+
+    <div id="map" style="height: 600px; width: 100%; border-radius: 8px;"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Инициализация карты (центр — Воронеж)
+    const map = L.map('map').setView([51.660598, 39.200585], 12);
+
+    // Добавляем слой OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Добавляем маркеры
+    {% for needy in needies %}
+    {% if needy.lat and needy.lng %}
+    const marker{{ loop.index }} = L.marker([{{ needy.lat }}, {{ needy.lng }}]).addTo(map);
+    marker{{ loop.index }}.bindPopup(`
+        <div style="max-width: 200px;">
+            <h5>{{ needy.name }}</h5>
+            {% if needy.photo %}
+            <img src="/{{ needy.photo }}"
+                 style="max-width: 100%; height: auto; margin-bottom: 10px;">
+            {% endif %}
+            <p>{{ needy.description[:100] }}{% if needy.description|length > 100 %}...{% endif %}</p>
+            <a href="{{ url_for('needy_profile', id=needy.id) }}" class="btn btn-sm btn-primary">
+                Подробнее
+            </a>
+        </div>
+    `);
+    {% endif %}
+    {% endfor %}
+</script>
+{% endblock %}

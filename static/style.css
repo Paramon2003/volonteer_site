@@ -1,0 +1,35 @@
+body {
+    padding-top: 60px;
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.img-thumbnail {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.btn-primary, .btn-success, .btn-outline-primary {
+    border-radius: 20px;
+}
+
+h2, h3, h4 {
+    color: #3338D5;
+}
+
+footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    background-color: #e9ecef;
+    text-align: center;
+    color: #555;
+}
