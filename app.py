@@ -1,5 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import sqlite3
 import os
 import requests
@@ -166,7 +167,6 @@ def register():
         name = request.form['name']
         email = request.form['email']
         phone = request.form['phone']
-        city = request.form['city']
         role = request.form['role']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
@@ -200,10 +200,10 @@ def register():
 
         with sqlite3.connect(DB_NAME) as conn:
             try:
-                conn.execute('''INSERT INTO users (name, email, password, phone, city, role, photo, 
+                conn.execute('''INSERT INTO users (name, email, password, phone, role, photo, 
                                                   is_verified, organization_name, organization_description, created_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                             (name, email, password_hash, phone, city, role, photo,
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (name, email, password_hash, phone, role, photo,
                               is_verified, organization_name, organization_description, datetime.now().isoformat()))
                 conn.commit()
 
