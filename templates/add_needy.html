@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block title %}Добавить нуждающегося{% endblock %}
+{% block content %}
+<h2 class="mt-4">Добавить нуждающегося</h2>
+
+{% if user_role == 'organization' and not is_verified %}
+<div class="alert alert-warning">
+    <strong>Внимание!</strong> Ваша организация еще не подтверждена администратором.
+    После подтверждения вы сможете добавлять нуждающихся.
+</div>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Имя/ФИО нуждающегося</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Категория</label>
+        <select name="tag" class="form-control" required>
+            <option value="elderly">Пожилые люди</option>
+            <option value="animals">Животные</option>
+            <option value="children">Дети</option>
+            <option value="disabled">Люди с ограниченными возможностями</option>
+            <option value="homeless">Бездомные</option>
+            <option value="other">Другое</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Описание ситуации</label>
+        <textarea name="description" class="form-control" rows="4" required></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Адрес</label>
+        <input type="text" name="address" class="form-control" placeholder="ул. Пушкина, д. 10" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">На что пойдёт помощь</label>
+        <textarea name="help_info" class="form-control" rows="3"
+                  placeholder="Например: необходимы продукты, лекарства, одежда..."></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Срочность</label>
+        <select name="urgency_level" class="form-control">
+            <option value="1">Высокая (требуется срочная помощь)</option>
+            <option value="2" selected>Средняя</option>
+            <option value="3">Низкая</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Фото (необязательно)</label>
+        <input type="file" name="photo" class="form-control">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Добавить нуждающегося</button>
+    <a href="/needies" class="btn btn-secondary">Отмена</a>
+</form>
+{% endblock %}

@@ -48,10 +48,7 @@ def init_db():
             name TEXT,
             email TEXT UNIQUE,
             password TEXT,
-            phone TEXT,
-            city TEXT,
             role TEXT DEFAULT 'volunteer',  -- admin, volunteer, organization
-            photo TEXT,
             is_verified INTEGER DEFAULT 0,   -- 0 = не подтвержден, 1 = подтвержден
             rating REAL DEFAULT 0,
             completed_tasks INTEGER DEFAULT 0,
@@ -161,31 +158,70 @@ def init_db():
 
 
 # --- Регистрация ---
+# app.py - обновленный маршрут регистрации
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
-        password = generate_password_hash(request.form['password'])
+        phone = request.form['phone']
+        city = request.form['city']
+        role = request.form['role']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        # Проверка пароля
+        if password != confirm_password:
+            flash('Пароли не совпадают')
+            return redirect(url_for('register'))
+
+        # Для организаций требуется проверка
+        is_verified = 0
+        organization_name = None
+        organization_description = None
+
+        if role == 'organization':
+            organization_name = name
+            organization_description = request.form.get('organization_description', '')
+            # Организации требуют подтверждения администратором
+            flash('Ваша заявка отправлена на рассмотрение. После подтверждения вы сможете добавлять нуждающихся.',
+                  'info')
+
+        password_hash = generate_password_hash(password)
+
         photo = None
         if 'photo' in request.files:
             f = request.files['photo']
             if f.filename:
-                photo = os.path.join(UPLOAD_FOLDER, f.filename)
+                filename = secure_filename(f.filename)
+                photo = os.path.join(UPLOAD_FOLDER, filename)
                 f.save(photo)
+
         with sqlite3.connect(DB_NAME) as conn:
             try:
-                conn.execute('INSERT INTO users (name, email, password, photo) VALUES (?, ?, ?, ?)',
-                             (name, email, password, photo))
+                conn.execute('''INSERT INTO users (name, email, password, phone, city, role, photo, 
+                                                  is_verified, organization_name, organization_description, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (name, email, password_hash, phone, city, role, photo,
+                              is_verified, organization_name, organization_description, datetime.now().isoformat()))
                 conn.commit()
-                flash('Registered successfully!')
-                return redirect(url_for('login'))
+
+                if role != 'organization':
+                    flash('Регистрация успешна! Теперь вы можете войти.')
+                    return redirect(url_for('login'))
+                else:
+                    return redirect(url_for('login'))
+
             except sqlite3.IntegrityError:
-                flash('Email already used.')
+                flash('Email уже используется')
+
     return render_template('register.html')
 
 
 # --- Авторизация ---
+# app.py - обновленный логин с сохранением роли в сессии
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -197,9 +233,17 @@ def login():
             user = c.fetchone()
             if user and check_password_hash(user[3], password):
                 session['user_id'] = user[0]
+                session['user_role'] = user[5]  # сохраняем роль
+                session['user_name'] = user[1]
+
+                # Обновляем время последнего входа
+                c.execute('UPDATE users SET last_login = ? WHERE id = ?',
+                          (datetime.now().isoformat(), user[0]))
+                conn.commit()
+
                 return redirect(url_for('dashboard'))
             else:
-                flash('Invalid login.')
+                flash('Неверный email или пароль')
     return render_template('login.html')
 
 
@@ -231,36 +275,43 @@ def dashboard():
     return render_template('dashboard.html', user=user, reports=reports)
 
 
+# app.py - обновленный список нуждающихся
+
 @app.route('/needies')
 def needies_list():
     view = request.args.get('view', 'list')
 
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
-        c.execute('SELECT id, name, tag, photo, description, address, lat, lng FROM needies')
+        # Показываем только подтвержденных нуждающихся
+        c.execute('''SELECT id, name, tag, photo, description, address, lat, lng, urgency_level 
+                     FROM needies 
+                     WHERE status = "approved" AND is_active = 1 
+                     ORDER BY urgency_level ASC, created_at DESC''')
         needies = c.fetchall()
 
-    if view == 'map':
-        map_data = []
-        for needy in needies:
-            if not needy[6] or not needy[7]:
-                lat, lng = geocode_address(needy[5])
-                with sqlite3.connect(DB_NAME) as conn:
-                    conn.execute('UPDATE needies SET lat=?, lng=? WHERE id=?',
-                                 (lat, lng, needy[0]))
-                    conn.commit()
+        # Для карты добавляем координаты
+        if view == 'map':
+            map_data = []
+            for needy in needies:
+                if needy[6] and needy[7]:
+                    lat, lng = needy[6], needy[7]
+                else:
+                    lat, lng = geocode_address(needy[5])
                 map_data.append({
-                    **dict(zip(['id', 'name', 'tag', 'photo', 'description', 'address', 'lat', 'lng'], needy)),
+                    'id': needy[0],
+                    'name': needy[1],
+                    'tag': needy[2],
+                    'photo': needy[3],
+                    'description': needy[4],
+                    'address': needy[5],
                     'lat': lat,
-                    'lng': lng
+                    'lng': lng,
+                    'urgency_level': needy[8]
                 })
-            else:
-                map_data.append(
-                    dict(zip(['id', 'name', 'tag', 'photo', 'description', 'address', 'lat', 'lng'], needy)))
+            return render_template('needies_map.html', needies=map_data)
 
-        return render_template('needies_map.html', needies=map_data)
-
-    return render_template('needies_list.html', needies=needies)
+        return render_template('needies_list.html', needies=needies)
 
 
 # --- Список нуждающихся ---
@@ -271,6 +322,63 @@ def needy_profile(id):
         c.execute('SELECT * FROM needies WHERE id = ?', (id,))
         needy = c.fetchone()
     return render_template('needy_profile.html', needy=needy)
+
+
+# добавление нуждающегося
+@app.route('/add_needy', methods=['GET', 'POST'])
+def add_needy():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role, is_verified FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+
+        # Проверка прав: только организации (подтвержденные) и админы
+        if user[0] == 'volunteer':
+            flash('Только организации и администраторы могут добавлять нуждающихся')
+            return redirect(url_for('needies_list'))
+
+        if user[0] == 'organization' and not user[1]:
+            flash('Ваша организация еще не подтверждена администратором')
+            return redirect(url_for('needies_list'))
+
+        if request.method == 'POST':
+            name = request.form['name']
+            tag = request.form['tag']
+            description = request.form['description']
+            address = request.form['address']
+            help_info = request.form['help_info']
+            urgency_level = int(request.form['urgency_level'])
+
+            photo = None
+            if 'photo' in request.files:
+                f = request.files['photo']
+                if f.filename:
+                    filename = secure_filename(f.filename)
+                    photo = os.path.join(UPLOAD_FOLDER, filename)
+                    f.save(photo)
+
+            # Геокодирование адреса
+            lat, lng = geocode_address(address)
+
+            # Для организаций - сразу активный, для админов - тоже
+            status = 'approved'  # Сразу одобрено, так как добавляет верифицированная организация или админ
+
+            c.execute('''INSERT INTO needies (name, tag, photo, description, address, lat, lng, 
+                                             help_info, organization_id, created_by, created_at, 
+                                             urgency_level, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (name, tag, photo, description, address, lat, lng, help_info,
+                       session['user_id'], session['user_id'], datetime.now().isoformat(),
+                       urgency_level, status))
+            conn.commit()
+
+            flash('Нуждающийся успешно добавлен!')
+            return redirect(url_for('needies_list'))
+
+    return render_template('add_needy.html', user_role=user[0], is_verified=user[1])
 
 
 # --- Задания ---
@@ -322,6 +430,51 @@ def donate(needy_id):
     flash('Спасибо за помощь!')
     return redirect(url_for('needy_profile', id=needy_id))
 
+
+#административные маршруты
+@app.route('/admin/users')
+def admin_users():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    # Проверка прав администратора
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        c.execute('SELECT id, name, email, role, is_verified, rating FROM users ORDER BY created_at DESC')
+        users = c.fetchall()
+
+        users_list = [{'id': u[0], 'name': u[1], 'email': u[2], 'role': u[3],
+                       'is_verified': u[4], 'rating': u[5]} for u in users]
+
+        return render_template('admin/users.html', users=users_list)
+
+
+@app.route('/admin/verify_organization/<int:org_id>')
+def verify_organization(org_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        c.execute('UPDATE users SET is_verified = 1 WHERE id = ? AND role = "organization"', (org_id,))
+        conn.commit()
+
+        flash('Организация подтверждена')
+        return redirect(url_for('admin_users'))
 
 # --- Запуск ---
 if __name__ == '__main__':

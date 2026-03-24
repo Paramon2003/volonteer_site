@@ -16,16 +16,28 @@
     </style>
 </head>
 <body>
+<!-- templates/layout.html - обновленная навигация -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">Мы - рядом</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
                 {% if 'user_id' in session %}
-                    <li class="nav-item"><a class="nav-link" href="/dashboard">Профиль</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/needies">Нуждающиеся</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/tasks">Дела</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Выход</a></li>
+                    {% with user_role = session.get('user_role') %}
+                        <li class="nav-item"><a class="nav-link" href="/dashboard">Профиль</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/needies">Нуждающиеся</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/tasks">Дела</a></li>
+
+                        {% if user_role == 'admin' %}
+                            <li class="nav-item"><a class="nav-link" href="/admin/users">Админ-панель</a></li>
+                        {% endif %}
+
+                        {% if user_role == 'organization' or user_role == 'admin' %}
+                            <li class="nav-item"><a class="nav-link" href="/add_needy">+ Добавить нуждающегося</a></li>
+                        {% endif %}
+
+                        <li class="nav-item"><a class="nav-link" href="/logout">Выход</a></li>
+                    {% endwith %}
                 {% else %}
                     <li class="nav-item"><a class="nav-link" href="/login">Вход</a></li>
                     <li class="nav-item"><a class="nav-link" href="/register">Регистрация</a></li>
