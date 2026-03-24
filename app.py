@@ -37,16 +37,31 @@ def geocode_address(address, city="Воронеж"):
 
 
 # --- Инициализация базы данных ---
+
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
+
+        # Таблица пользователей с ролями
         c.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             email TEXT UNIQUE,
             password TEXT,
-            photo TEXT
+            phone TEXT,
+            city TEXT,
+            role TEXT DEFAULT 'volunteer',  -- admin, volunteer, organization
+            photo TEXT,
+            is_verified INTEGER DEFAULT 0,   -- 0 = не подтвержден, 1 = подтвержден
+            rating REAL DEFAULT 0,
+            completed_tasks INTEGER DEFAULT 0,
+            organization_name TEXT,          -- для организаций
+            organization_description TEXT,   -- описание организации
+            created_at TEXT,
+            last_login TEXT
         )''')
+
+        # Таблица нуждающихся (добавляются только организациями/админами)
         c.execute('''CREATE TABLE IF NOT EXISTS needies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
@@ -54,26 +69,54 @@ def init_db():
             photo TEXT,
             description TEXT,
             address TEXT,
+            lat REAL,
+            lng REAL,
             funds_collected REAL DEFAULT 0,
-            help_info TEXT
+            help_info TEXT,
+            organization_id INTEGER,          -- кто добавил (ID организации)
+            created_by INTEGER,               -- ID пользователя, добавившего
+            created_at TEXT,
+            is_active INTEGER DEFAULT 1,      -- активен ли профиль
+            urgency_level INTEGER DEFAULT 2,   -- 1=высокая, 2=средняя, 3=низкая
+            status TEXT DEFAULT 'pending',    -- pending, approved, rejected
+            FOREIGN KEY(organization_id) REFERENCES users(id),
+            FOREIGN KEY(created_by) REFERENCES users(id)
         )''')
+
+        # Остальные таблицы с небольшими изменениями
         c.execute('''CREATE TABLE IF NOT EXISTS help_tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             description TEXT,
             needy_id INTEGER,
-            FOREIGN KEY(needy_id) REFERENCES needies(id)
+            status TEXT DEFAULT 'pending',    -- pending, in_progress, completed, cancelled
+            assigned_to INTEGER,              -- волонтер, взявший задачу
+            created_by INTEGER,               -- кто создал задачу
+            deadline TEXT,
+            created_at TEXT,
+            completed_at TEXT,
+            FOREIGN KEY(needy_id) REFERENCES needies(id),
+            FOREIGN KEY(assigned_to) REFERENCES users(id),
+            FOREIGN KEY(created_by) REFERENCES users(id)
         )''')
+
         c.execute('''CREATE TABLE IF NOT EXISTS reports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             needy_id INTEGER,
+            task_id INTEGER,                  -- связь с задачей
             photo TEXT,
             text TEXT,
+            status TEXT DEFAULT 'pending',     -- pending, approved, rejected
             created_at TEXT,
+            approved_at TEXT,
+            approved_by INTEGER,
             FOREIGN KEY(user_id) REFERENCES users(id),
-            FOREIGN KEY(needy_id) REFERENCES needies(id)
+            FOREIGN KEY(needy_id) REFERENCES needies(id),
+            FOREIGN KEY(task_id) REFERENCES help_tasks(id),
+            FOREIGN KEY(approved_by) REFERENCES users(id)
         )''')
+
         c.execute('''CREATE TABLE IF NOT EXISTS donations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -84,6 +127,37 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id),
             FOREIGN KEY(needy_id) REFERENCES needies(id)
         )''')
+
+        # Новая таблица для заявок на добавление нуждающихся
+        c.execute('''CREATE TABLE IF NOT EXISTS needy_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            tag TEXT,
+            description TEXT,
+            address TEXT,
+            help_info TEXT,
+            requester_name TEXT,
+            requester_phone TEXT,
+            requester_email TEXT,
+            status TEXT DEFAULT 'pending',    -- pending, approved, rejected
+            created_at TEXT,
+            reviewed_by INTEGER,
+            reviewed_at TEXT,
+            review_comment TEXT,
+            FOREIGN KEY(reviewed_by) REFERENCES users(id)
+        )''')
+
+        # Создаем администратора по умолчанию, если его нет
+        admin_exists = c.execute('SELECT * FROM users WHERE role = "admin"').fetchone()
+        if not admin_exists:
+            from werkzeug.security import generate_password_hash
+            c.execute('''INSERT INTO users (name, email, password, role, is_verified, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)''',
+                      ('Администратор', 'admin@example.com',
+                       generate_password_hash('admin123'), 'admin', 1,
+                       datetime.now().isoformat()))
+
+        conn.commit()
 
 
 # --- Регистрация ---
