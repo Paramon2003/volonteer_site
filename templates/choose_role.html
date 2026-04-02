@@ -1,10 +1,225 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "layout.html" %}
+{% block title %}Выбор типа аккаунта{% endblock %}
+{% block content %}
+<style>
+    /* Сброс отступов */
+    .choose-role-page {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+    }
 
-</body>
-</html>
+    /* Контейнер для выбора роли */
+    .role-selection {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Заголовок */
+    .role-title {
+        text-align: center;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: clamp(28px, 6vw, 48px);
+        line-height: 1.2;
+        color: #000000;
+        margin-bottom: 40px;
+        padding: 0 20px;
+    }
+
+    /* Блоки выбора */
+    .role-options {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        align-items: center;
+    }
+
+    /* Карточка выбора */
+    .role-card {
+        width: 100%;
+        max-width: 500px;
+        background: #FF8E83;
+        border-radius: 56.5px;
+        padding: 25px 30px;
+        display: flex;
+        align-items: center;
+        gap: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        border: 3px solid transparent;
+    }
+
+    .role-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        border-color: #fff;
+    }
+
+    /* Вторая карточка - другой цвет */
+    .role-card.organization {
+        background: #FFA59D;
+    }
+
+    /* Иконка */
+    .role-icon {
+        width: 80px;
+        height: 80px;
+        flex-shrink: 0;
+        background: #FFFFFF;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .role-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Текст карточки */
+    .role-info {
+        flex: 1;
+    }
+
+    .role-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 700;
+        font-size: clamp(28px, 5vw, 48px);
+        line-height: 1.2;
+        color: #FFFFFF;
+        margin-bottom: 8px;
+    }
+
+    .role-desc {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: clamp(14px, 3vw, 18px);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Стрелка */
+    .role-arrow {
+        font-size: 32px;
+        color: #FFFFFF;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+
+    .role-card:hover .role-arrow {
+        opacity: 1;
+        transform: translateX(5px);
+    }
+
+    /* Декоративный элемент */
+    .role-decoration {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: #FF8E83;
+        border-radius: 88px;
+        opacity: 0.1;
+        z-index: -1;
+    }
+
+    .role-decoration-1 {
+        top: -50px;
+        left: -80px;
+    }
+
+    .role-decoration-2 {
+        bottom: -50px;
+        right: -80px;
+        background: #A07F74;
+    }
+
+    /* Адаптация для мобильных */
+    @media (max-width: 640px) {
+        .role-card {
+            padding: 18px 20px;
+            gap: 15px;
+        }
+        
+        .role-icon {
+            width: 55px;
+            height: 55px;
+        }
+        
+        .role-arrow {
+            font-size: 24px;
+        }
+        
+        .role-name {
+            font-size: 24px;
+        }
+        
+        .role-desc {
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .role-card {
+            flex-wrap: wrap;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .role-info {
+            text-align: center;
+        }
+        
+        .role-arrow {
+            display: none;
+        }
+    }
+</style>
+
+<div class="choose-role-page">
+    <div class="role-selection">
+        <!-- Декоративные элементы -->
+        <div class="role-decoration role-decoration-1"></div>
+        <div class="role-decoration role-decoration-2"></div>
+
+        <h1 class="role-title">Какой тип аккаунта Вы хотите создать?</h1>
+
+        <div class="role-options">
+            <a href="{{ url_for('register_volunteer') }}" class="role-card">
+                <div class="role-icon">
+                    <img src="{{ url_for('static', filename='volunteer-icon.png') }}" 
+                         alt="Волонтёр"
+                         onerror="this.src='https://via.placeholder.com/80?text=👤'">
+                </div>
+                <div class="role-info">
+                    <div class="role-name">волонтёр</div>
+                    <div class="role-desc">Помогайте тем, кто в этом нуждается</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+
+            <a href="{{ url_for('register_organization') }}" class="role-card organization">
+                <div class="role-icon">
+                    <img src="{{ url_for('static', filename='organization-icon.png') }}" 
+                         alt="Организация"
+                         onerror="this.src='https://via.placeholder.com/80?text=🏢'">
+                </div>
+                <div class="role-info">
+                    <div class="role-name">организация</div>
+                    <div class="role-desc">НКО, фонд, приют — публикуйте нуждающихся</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

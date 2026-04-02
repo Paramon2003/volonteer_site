@@ -158,38 +158,38 @@ def init_db():
         conn.commit()
 
 
-# --- Регистрация ---
-# app.py - обновленный маршрут регистрации
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+
+@app.route('/choose-role')
+def choose_role():
+    """Страница выбора типа аккаунта"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('choose_role.html')
+
+
+@app.route('/register/volunteer', methods=['GET', 'POST'])
+def register_volunteer():
+    """Регистрация волонтера"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         phone = request.form['phone']
-        role = request.form['role']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
+        role = 'volunteer'
 
         # Проверка пароля
         if password != confirm_password:
             flash('Пароли не совпадают')
-            return redirect(url_for('register'))
-
-        # Для организаций требуется проверка
-        is_verified = 0
-        organization_name = None
-        organization_description = None
-
-        if role == 'organization':
-            organization_name = name
-            organization_description = request.form.get('organization_description', '')
-            # Организации требуют подтверждения администратором
-            flash('Ваша заявка отправлена на рассмотрение. После подтверждения вы сможете добавлять нуждающихся.',
-                  'info')
+            return redirect(url_for('register_volunteer'))
 
         password_hash = generate_password_hash(password)
 
+        # Обработка фото
         photo = None
         if 'photo' in request.files:
             f = request.files['photo']
@@ -200,23 +200,65 @@ def register():
 
         with sqlite3.connect(DB_NAME) as conn:
             try:
-                conn.execute('''INSERT INTO users (name, email, password, phone, role, photo, 
-                                                  is_verified, organization_name, organization_description, created_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                             (name, email, password_hash, phone, role, photo,
-                              is_verified, organization_name, organization_description, datetime.now().isoformat()))
+                conn.execute('''INSERT INTO users (name, email, password, phone, role, photo, is_verified, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (name, email, password_hash, phone, role, photo, 1, datetime.now().isoformat()))
                 conn.commit()
-
-                if role != 'organization':
-                    flash('Регистрация успешна! Теперь вы можете войти.')
-                    return redirect(url_for('login'))
-                else:
-                    return redirect(url_for('login'))
-
+                flash('Регистрация успешна! Теперь вы можете войти.')
+                return redirect(url_for('login'))
             except sqlite3.IntegrityError:
                 flash('Email уже используется')
 
-    return render_template('register.html')
+    return render_template('register_volunteer.html')
+
+
+@app.route('/register/organization', methods=['GET', 'POST'])
+def register_organization():
+    """Регистрация организации"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        phone = request.form['phone']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        organization_description = request.form.get('organization_description', '')
+        role = 'organization'
+        is_verified = 0  # Требует подтверждения
+
+        # Проверка пароля
+        if password != confirm_password:
+            flash('Пароли не совпадают')
+            return redirect(url_for('register_organization'))
+
+        password_hash = generate_password_hash(password)
+
+        # Обработка фото
+        photo = None
+        if 'photo' in request.files:
+            f = request.files['photo']
+            if f.filename:
+                filename = secure_filename(f.filename)
+                photo = os.path.join(UPLOAD_FOLDER, filename)
+                f.save(photo)
+
+        with sqlite3.connect(DB_NAME) as conn:
+            try:
+                conn.execute('''INSERT INTO users (name, email, password, phone, role, photo, is_verified, 
+                                                  organization_name, organization_description, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (name, email, password_hash, phone, role, photo, is_verified,
+                              name, organization_description, datetime.now().isoformat()))
+                conn.commit()
+                flash('Ваша заявка отправлена на рассмотрение. После подтверждения вы сможете добавлять нуждающихся.',
+                      'info')
+                return redirect(url_for('login'))
+            except sqlite3.IntegrityError:
+                flash('Email уже используется')
+
+    return render_template('register_organization.html')
 
 
 # --- Авторизация ---
