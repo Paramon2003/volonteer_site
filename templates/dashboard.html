@@ -1,39 +1,629 @@
 {% extends "layout.html" %}
 {% block title %}Личный кабинет{% endblock %}
 {% block content %}
-<h2 class="mt-4">Личный кабинет</h2>
-<div class="row mb-4">
-    <div class="col-md-3">
-        {% if user[1] %}
-            <img src="/{{ user[1] }}" class="img-thumbnail" alt="Фото профиля">
-        {% else %}
-            <img src="https://via.placeholder.com/150" class="img-thumbnail" alt="Фото профиля">
-        {% endif %}
-    </div>
-    <div class="col-md-9">
-        <h4>{{ user[0] }}</h4>
-        <p>Спасибо, что вы с нами! Ниже вы можете увидеть, как вы уже помогли.</p>
-    </div>
-</div>
-<hr>
-<h4>Мои отчёты о помощи</h4>
-{% if reports %}
-    <div class="row">
-        {% for r in reports %}
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    {% if r[2] %}
-                        <img src="/{{ r[2] }}" class="card-img-top" alt="Фото">
+<style>
+    /* Страница профиля */
+    .profile-page {
+        min-height: calc(100vh - 80px);
+        padding: 40px 30px;
+        position: relative;
+    }
+
+    /* Контейнер */
+    .profile-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Левая колонка с фото */
+    .profile-left {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .profile-photo {
+        width: 100%;
+        max-width: 327px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    .profile-photo img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1/1;
+        object-fit: cover;
+        border-radius: 50%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Заголовок "мой профиль" над фото */
+    .profile-title-badge {
+        background: #A17F74;
+        border-radius: 88px;
+        padding: 12px 30px;
+        display: inline-block;
+        margin-bottom: 30px;
+        transform: rotate(180deg);
+        writing-mode: horizontal-tb;
+    }
+
+    .profile-title-badge span {
+        transform: rotate(180deg);
+        display: inline-block;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: clamp(20px, 5vw, 32px);
+        line-height: 1.2;
+        color: #FFFFFF;
+    }
+
+    /* Кнопка "изменить данные" */
+    .edit-profile-btn {
+        background: #5D4037;
+        border-radius: 34px;
+        padding: 15px 30px;
+        text-align: center;
+        margin-top: 40px;
+        transition: all 0.3s ease;
+        display: inline-block;
+        width: 100%;
+        max-width: 380px;
+    }
+
+    .edit-profile-btn a {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: clamp(20px, 5vw, 32px);
+        line-height: 1.2;
+        color: #FFFFFF;
+        text-decoration: none;
+        display: block;
+    }
+
+    .edit-profile-btn:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+    }
+
+    /* Правая колонка с информацией */
+    .profile-right {
+        background: #FFA59D;
+        border-radius: 88px;
+        padding: 40px 35px;
+        height: 100%;
+        min-height: 853px;
+    }
+
+    /* Информация о пользователе */
+    .user-info-header {
+        display: flex;
+        align-items: baseline;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .user-info-label {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: clamp(20px, 5vw, 32px);
+        line-height: 1.2;
+        color: #474747;
+    }
+
+    .user-info-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 700;
+        font-size: clamp(24px, 5vw, 32px);
+        line-height: 1.2;
+        color: #000000;
+    }
+
+    /* Дополнительная информация */
+    .user-details {
+        margin-bottom: 40px;
+    }
+
+    .detail-item {
+        margin-bottom: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .detail-label {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: clamp(18px, 4vw, 24px);
+        color: #474747;
+        min-width: 120px;
+    }
+
+    .detail-value {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: clamp(18px, 4vw, 24px);
+        color: #000000;
+        word-break: break-word;
+    }
+
+    /* Блоки со статистикой */
+    .stats-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        margin-top: 40px;
+    }
+
+    .stat-card {
+        flex: 1;
+        min-width: 250px;
+        border-radius: 28.5px;
+        overflow: hidden;
+    }
+
+    .stat-header {
+        background: #FF8376;
+        padding: 15px 25px;
+        text-align: center;
+    }
+
+    .stat-header h3 {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: clamp(20px, 5vw, 32px);
+        line-height: 1.2;
+        color: #FFFFFF;
+        margin: 0;
+    }
+
+    .stat-header.completed {
+        background: #FF6F61;
+    }
+
+    .stat-content {
+        background: #5D4037;
+        padding: 30px 20px;
+        text-align: center;
+        min-height: 121px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stat-content.in-progress {
+        background: #C4A095;
+    }
+
+    .stat-number {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 700;
+        font-size: clamp(36px, 8vw, 48px);
+        color: #FFFFFF;
+    }
+
+    .stat-label {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: clamp(18px, 4vw, 32px);
+        color: #FFFFFF;
+        margin-top: 5px;
+    }
+
+    /* Список задач */
+    .tasks-list {
+        margin-top: 30px;
+    }
+
+    .tasks-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: clamp(20px, 5vw, 28px);
+        color: #000000;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .task-item {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .task-item:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateX(5px);
+    }
+
+    .task-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        color: #000000;
+        margin-bottom: 8px;
+    }
+
+    .task-desc {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .task-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .status-pending {
+        background: #FFD700;
+        color: #000;
+    }
+
+    .status-in-progress {
+        background: #4CAF50;
+        color: #fff;
+    }
+
+    .status-completed {
+        background: #2196F3;
+        color: #fff;
+    }
+
+    /* Отчеты */
+    .reports-section {
+        margin-top: 30px;
+    }
+
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .report-card {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .report-card:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-3px);
+    }
+
+    .report-card img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 12px;
+        margin-bottom: 10px;
+    }
+
+    .report-needy {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        color: #000;
+        margin-bottom: 8px;
+    }
+
+    .report-text {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 14px;
+        color: #333;
+        line-height: 1.4;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 30px;
+        font-family: 'Gilroy', sans-serif;
+        font-size: 18px;
+        color: #666;
+    }
+
+    /* Адаптивность */
+    @media (min-width: 992px) {
+        .profile-flex {
+            display: flex;
+            gap: 40px;
+        }
+
+        .profile-left {
+            flex: 0 0 327px;
+        }
+
+        .profile-right {
+            flex: 1;
+        }
+    }
+
+    @media (max-width: 991px) {
+        .profile-page {
+            padding: 20px;
+        }
+
+        .profile-right {
+            margin-top: 30px;
+            padding: 25px;
+            min-height: auto;
+        }
+
+        .profile-photo {
+            max-width: 250px;
+        }
+
+        .edit-profile-btn {
+            max-width: 280px;
+            margin: 30px auto 0;
+        }
+
+        .profile-left {
+            text-align: center;
+        }
+
+        .stats-row {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-card {
+            min-width: auto;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .profile-right {
+            padding: 20px;
+            border-radius: 50px;
+        }
+
+        .user-info-header {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-item {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            min-width: auto;
+        }
+
+        .reports-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .profile-page {
+            padding: 15px;
+        }
+
+        .profile-right {
+            padding: 15px;
+            border-radius: 40px;
+        }
+
+        .stat-header {
+            padding: 10px 20px;
+        }
+
+        .stat-content {
+            padding: 20px;
+            min-height: 100px;
+        }
+    }
+</style>
+
+<div class="profile-page">
+    <div class="profile-container">
+        <div class="profile-flex">
+            <!-- Левая колонка -->
+            <div class="profile-left">
+                <div class="profile-title-badge">
+                    <span>мой профиль</span>
+                </div>
+
+                <div class="profile-photo">
+                    {% if user_photo %}
+                        <img src="/{{ user_photo }}" alt="Фото профиля">
+                    {% else %}
+                        <img src="https://via.placeholder.com/327x327?text=Фото" alt="Фото профиля">
                     {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">Кому: {{ r[0] }}</h5>
-                        <p class="card-text">{{ r[1] }}</p>
-                    </div>
+                </div>
+
+                <div class="edit-profile-btn">
+                    <a href="#" onclick="showEditModal()">изменить данные</a>
                 </div>
             </div>
-        {% endfor %}
+
+            <!-- Правая колонка -->
+            <div class="profile-right">
+                <!-- Информация о пользователе -->
+                <div class="user-info-header">
+                    <span class="user-info-label">имя:</span>
+                    <span class="user-info-name">{{ user_name }}</span>
+                </div>
+
+                <div class="user-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">{{ user_email }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Телефон:</span>
+                        <span class="detail-value">{{ user_phone or 'Не указан' }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Роль:</span>
+                        <span class="detail-value">
+                            {% if user_role == 'admin' %}
+                                Администратор
+                            {% elif user_role == 'organization' %}
+                                Организация
+                            {% else %}
+                                Волонтер
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if user_role == 'organization' and organization_description %}
+                    <div class="detail-item">
+                        <span class="detail-label">Описание:</span>
+                        <span class="detail-value">{{ organization_description }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-item">
+                        <span class="detail-label">Рейтинг:</span>
+                        <span class="detail-value">{{ "%.1f"|format(user_rating) }} ⭐</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">На сайте с:</span>
+                        <span class="detail-value">{{ created_at[:10] if created_at else 'Недавно' }}</span>
+                    </div>
+                </div>
+
+                <!-- Статистика -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-header completed">
+                            <h3>выполненные задачи</h3>
+                        </div>
+                        <div class="stat-content">
+                            <div>
+                                <div class="stat-number">{{ completed_tasks }}</div>
+                                <div class="stat-label">задач(и)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3>задачи в процессе</h3>
+                        </div>
+                        <div class="stat-content in-progress">
+                            <div>
+                                <div class="stat-number">{{ in_progress_tasks }}</div>
+                                <div class="stat-label">задач(и)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Активные задачи -->
+                {% if active_tasks %}
+                <div class="tasks-list">
+                    <div class="tasks-title">📋 Мои активные задачи</div>
+                    {% for task in active_tasks %}
+                    <div class="task-item">
+                        <div class="task-name">{{ task.title }}</div>
+                        <div class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</div>
+                        <div class="task-status status-{{ task.status|replace('_', '-') }}">
+                            {% if task.status == 'pending' %}Ожидает
+                            {% elif task.status == 'in_progress' %}В процессе
+                            {% elif task.status == 'completed' %}Выполнена
+                            {% else %}{{ task.status }}{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Отчеты о помощи -->
+                <div class="reports-section">
+                    <div class="tasks-title">📸 Мои отчеты о помощи</div>
+                    {% if reports %}
+                    <div class="reports-grid">
+                        {% for report in reports %}
+                        <div class="report-card">
+                            {% if report.photo %}
+                                <img src="/{{ report.photo }}" alt="Фото отчета">
+                            {% else %}
+                                <img src="https://via.placeholder.com/280x150?text=Нет+фото" alt="Нет фото">
+                            {% endif %}
+                            <div class="report-needy">Кому: {{ report.needy_name }}</div>
+                            <div class="report-text">{{ report.text[:100] }}{% if report.text|length > 100 %}...{% endif %}</div>
+                            <div class="report-text" style="font-size: 12px; color: #666; margin-top: 8px;">
+                                {{ report.created_at[:10] if report.created_at else '' }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="no-data">
+                        🤝 Пока нет отчетов. Помогите нуждающимся и оставьте отчет!
+                        <br>
+                        <a href="{{ url_for('needies_list') }}" style="color: #FF6F61; text-decoration: none;">→ Перейти к списку нуждающихся</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-{% else %}
-    <p>Пока нет отчетов. Попробуйте выполнить доброе дело!</p>
-{% endif %}
+</div>
+
+<!-- Модальное окно для редактирования профиля -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 30px;">
+            <div class="modal-header" style="background: #FFA59D; border-radius: 30px 30px 0 0;">
+                <h5 class="modal-title" style="font-family: 'Gilroy', sans-serif; font-size: 28px;">Редактировать профиль</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Имя</label>
+                        <input type="text" name="name" class="form-control" value="{{ user_name }}" required style="border-radius: 20px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ user_phone or '' }}" style="border-radius: 20px;">
+                    </div>
+                    {% if user_role == 'organization' %}
+                    <div class="mb-3">
+                        <label class="form-label">Описание организации</label>
+                        <textarea name="organization_description" class="form-control" rows="3" style="border-radius: 20px;">{{ organization_description or '' }}</textarea>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Новое фото профиля</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*" style="border-radius: 20px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Новый пароль (оставьте пустым, если не хотите менять)</label>
+                        <input type="password" name="new_password" class="form-control" style="border-radius: 20px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 20px;">Отмена</button>
+                    <button type="submit" class="btn" style="background: #FF6F61; border-radius: 20px; color: white;">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showEditModal() {
+        const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
+        modal.show();
+    }
+</script>
 {% endblock %}

@@ -162,7 +162,6 @@ def init_db():
 
 @app.route('/choose-role')
 def choose_role():
-    """Страница выбора типа аккаунта"""
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return render_template('choose_role.html')
@@ -170,7 +169,6 @@ def choose_role():
 
 @app.route('/register/volunteer', methods=['GET', 'POST'])
 def register_volunteer():
-    """Регистрация волонтера"""
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
 

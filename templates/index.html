@@ -525,9 +525,11 @@
                     <div class="main-title">
                         Твоя забота: рядом с теми, кто нуждается
                     </div>
+                    {% if 'user_id' not in session %}
                     <a href="/register" class="join-block">
                         <span class="join-text">присоединиться</span>
                     </a>
+                    {% endif %}
                 </div>
                 <div class="card-right">
                     <div class="hero-image">
@@ -594,7 +596,7 @@
     <div class="org-block">
         <div class="org-title">Организации</div>
         <div class="org-text">Мы сотрудничаем с проверенными НКО, фондами и приютами. Присоединяйтесь к нам, чтобы делать добрые дела вместе!</div>
-        <a href="/register" class="org-button">Стать партнером</a>
+        <a href="{{ url_for('register_organization') }}" class="org-button">Стать партнером</a>
     </div>
 </div>
 {% endblock %}
