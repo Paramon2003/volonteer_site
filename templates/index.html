@@ -1,27 +1,600 @@
 {% extends "layout.html" %}
-{% block title %}Мы РЯДОМ{% endblock %}
+{% block title %}Мы РЯДОМ - помощь рядом{% endblock %}
 {% block content %}
-<div class="mt-4">
-    <h1 class="mb-4">Добро начинается с тебя</h1>
-    <p class="lead">Этот сайт помогает людям, которые хотят делать добро, находить тех, кто в нём нуждается.</p>
+<style>
 
-    <div class="row mt-5">
-        <div class="col-md-4">
-            <h4>Пожилые люди</h4>
-            <p>Одинокие бабушки и дедушки нуждаются в помощи по дому и общении. Вы можете приехать, помочь, поговорить и подарить тепло.</p>
-        </div>
-        <div class="col-md-4">
-            <h4>Животные</h4>
-            <p>Брошенные и больные животные нуждаются в уходе, лечении и добрых хозяевах. Поддержите приюты или помогите напрямую.</p>
-        </div>
-        <div class="col-md-4">
-            <h4>Дети</h4>
-            <p>Детям из сложных семей необходимы забота, вещи, игрушки и участие. Вы можете подарить радость ребёнку.</p>
+    /* Стили специально для главной страницы */
+    .hero-section {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        background: transparent;
+        overflow-x: hidden;
+    }
+
+
+    /* Затемнение */
+    .hero-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.88);
+        z-index: 1;
+    }
+
+    /* Основной контент поверх фона */
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 40px 38px 80px;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Белый скругленный блок */
+    .white-card {
+        background: #FFF6F0;
+        border-radius: 88px;
+        padding: 60px 60px 60px 60px;
+        width: 100%;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+
+    /* Контейнер для контента внутри белого блока */
+    .card-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Левая часть с текстом */
+    .card-left {
+        flex: 1;
+        min-width: 280px;
+        padding-right: 40px;
+    }
+
+    /* Текст "Твоя забота: рядом с теми, кто нуждается" */
+    .main-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 1000;
+        font-size: 96px;
+        line-height: 1.2;
+        color: #000000;
+        max-width: 670px;
+        margin-bottom: 60px;
+    }
+
+    /* Кнопка присоединиться */
+    .join-block {
+        background: #FF6F61;
+        border-radius: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 50px;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+    }
+
+    .join-block:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 25px rgba(255, 111, 97, 0.3);
+    }
+
+    .join-text {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 48px;
+        line-height: 1.2;
+        color: #000000;
+        text-decoration: none;
+    }
+
+    /* Правая часть с изображением (ВНУТРИ белого блока) */
+    .card-right {
+        flex-shrink: 0;
+        width: 553px;
+        max-width: 40%;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+    }
+
+    .hero-image {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .hero-image img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* ============ БЛОК "О ПРОЕКТЕ" ============ */
+    .about-project-section {
+        position: relative;
+        width: 100%;
+        max-width: 1440px;
+        margin: 0 auto;
+        background: transparent;
+        padding: 0 38px;
+        overflow: hidden;
+    }
+
+    .about-container {
+        position: relative;
+        width: 100%;
+        min-height: 1682px;
+    }
+
+    /* Большой серый блок Rectangle 10 */
+    .about-main-block {
+        position: absolute;
+        width: 1334px;
+        max-width: calc(100% - 60px);
+        height: 638px;
+        left: 53px;
+        top: 128px;
+        background: #C4A095;
+        border-radius: 88px;
+        z-index: 1;
+    }
+
+    /* Текст внутри большого блока */
+    .about-main-text {
+        position: absolute;
+        width: 1249px;
+        max-width: calc(100% - 100px);
+        height: auto;
+        left: 118px;
+        top: 209px;
+        font-family: 'Gilroy', sans-serif;
+        font-style: normal;
+        font-weight: 1000;
+        font-size: 36px;
+        line-height: 46px;
+        color: #000000;
+        z-index: 2;
+    }
+
+    /* Левое изображение Rectangle 1 */
+    .about-left-image {
+        position: absolute;
+        width: 495px;
+        height: 405px;
+        left: 53px;
+        top: 807px;
+        background-image: url('{{ url_for("static", filename="about-left.png") }}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 88px;
+        z-index: 1;
+    }
+
+    /* Розовый блок Rectangle 4 - теперь с текстом */
+    .about-pink-block {
+        position: absolute;
+        width: 783px;
+        max-width: calc(100% - 200px);
+        height: 326px;
+        left: 582px;
+        top: 807px;
+        background: #FF8E83;
+        border-radius: 46px;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+    }
+
+    .about-pink-text {
+        font-family: 'Gilroy', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 28px;
+        line-height: 38px;
+        color: #000000;
+    }
+
+    /* Правое изображение Rectangle 8 */
+    .about-right-image {
+        position: absolute;
+        width: 484px;
+        height: 405px;
+        left: 881px;
+        top: 1174px;
+        background-image: url('{{ url_for("static", filename="about-right.png") }}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 88px;
+        z-index: 1;
+    }
+
+    /* Темный блок Rectangle 9 */
+    .about-dark-block {
+        position: absolute;
+        width: 783px;
+        max-width: calc(100% - 200px);
+        height: 298px;
+        left: 53px;
+        top: 1253px;
+        background: #7F5C52;
+        border-radius: 46px;
+        z-index: 1;
+    }
+
+    /* Текст внутри темного блока */
+    .about-dark-text {
+        position: absolute;
+        width: 729px;
+        max-width: calc(100% - 100px);
+        height: auto;
+        left: 98px;
+        top: 1290px;
+        font-family: 'Gilroy', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 32px;
+        line-height: 42px;
+        color: #000000;
+        z-index: 2;
+    }
+
+    /* Адаптивность для блока "О проекте" */
+    @media (max-width: 1200px) {
+        .about-main-text {
+            font-size: 28px;
+            line-height: 38px;
+            left: 80px;
+            top: 180px;
+            width: calc(100% - 160px);
+        }
+        .about-main-block {
+            height: auto;
+            min-height: 500px;
+        }
+        .about-dark-text {
+            font-size: 24px;
+            line-height: 34px;
+            left: 60px;
+            top: 1280px;
+            width: calc(100% - 120px);
+        }
+        .about-dark-block {
+            height: auto;
+            min-height: 250px;
+        }
+        .about-pink-block {
+            height: auto;
+            min-height: 200px;
+        }
+        .about-pink-text {
+            font-size: 22px;
+            line-height: 32px;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .about-project-section {
+            padding: 0 20px;
+        }
+        .about-main-text {
+            font-size: 22px;
+            line-height: 30px;
+            left: 40px;
+            top: 160px;
+            width: calc(100% - 80px);
+        }
+        .about-main-block {
+            width: calc(100% - 40px);
+            left: 20px;
+            min-height: 450px;
+        }
+        .about-left-image {
+            width: 280px;
+            height: 230px;
+            left: 20px;
+            top: 650px;
+        }
+        .about-pink-block {
+            width: calc(100% - 320px);
+            left: 320px;
+            top: 650px;
+            min-height: 230px;
+        }
+        .about-pink-text {
+            font-size: 18px;
+            line-height: 28px;
+        }
+        .about-right-image {
+            width: 280px;
+            height: 230px;
+            left: auto;
+            right: 20px;
+            top: 950px;
+        }
+        .about-dark-block {
+            width: calc(100% - 320px);
+            left: 20px;
+            top: 950px;
+            min-height: 230px;
+        }
+        .about-dark-text {
+            font-size: 18px;
+            line-height: 28px;
+            left: 40px;
+            top: 970px;
+            width: calc(100% - 80px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .about-container {
+            min-height: auto;
+            padding-bottom: 40px;
+        }
+        .about-main-block {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            min-height: 400px;
+            margin-bottom: 20px;
+        }
+        .about-main-text {
+            position: relative;
+            left: 0;
+            top: 0;
+            padding: 40px 20px;
+            width: 100%;
+            font-size: 18px;
+            line-height: 26px;
+        }
+        .about-left-image {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        .about-pink-block {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            min-height: 150px;
+            margin: 20px 0;
+        }
+        .about-pink-text {
+            font-size: 16px;
+            line-height: 24px;
+        }
+        .about-right-image {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        .about-dark-block {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            min-height: 180px;
+            margin: 20px 0;
+        }
+        .about-dark-text {
+            position: relative;
+            left: 0;
+            top: 0;
+            padding: 30px 20px;
+            width: 100%;
+            font-size: 16px;
+            line-height: 24px;
+        }
+    }
+
+    /* Стили для нижних блоков */
+    .info-section {
+        position: relative;
+        z-index: 2;
+        background: transparent;
+    }
+
+    .about-block {
+        padding: 60px 38px 40px 38px;
+        max-width: 1440px;
+        margin: 0 auto;
+    }
+
+    .about-title {
+        font-size: 48px;
+        font-weight: 700;
+        margin-bottom: 40px;
+    }
+
+    .cards-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+    }
+
+    .info-card {
+        flex: 1;
+        min-width: 250px;
+        background: #FFD7D3;
+        padding: 30px;
+        border-radius: 32px;
+        transition: transform 0.3s;
+    }
+
+    .info-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .info-card h3 {
+        font-size: 32px;
+        color: #FF6F61;
+        margin-bottom: 15px;
+    }
+
+    .info-card p {
+        font-size: 18px;
+        line-height: 1.5;
+        color: #333;
+    }
+
+    .org-block {
+        padding: 60px 38px 80px 38px;
+        background: transparent;
+        max-width: 1440px;
+        margin: 0 auto;
+    }
+
+    .org-title {
+        font-size: 48px;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+
+    .org-text {
+        font-size: 20px;
+        margin-bottom: 40px;
+        max-width: 800px;
+    }
+
+    .org-button {
+        background: #FF6F61;
+        color: #000;
+        padding: 14px 40px;
+        border-radius: 46px;
+        text-decoration: none;
+        font-size: 20px;
+        display: inline-block;
+        transition: transform 0.3s;
+    }
+
+    .org-button:hover {
+        transform: scale(1.02);
+        color: #000;
+    }
+
+    @media (max-width: 768px) {
+        .about-block, .org-block {
+            padding: 40px 20px;
+        }
+        .about-title, .org-title {
+            font-size: 36px;
+        }
+        .info-card h3 {
+            font-size: 26px;
+        }
+    }
+</style>
+
+
+<div class="hero-section">
+    <div class="hero-content">
+        <div class="white-card">
+            <div class="card-content">
+                <div class="card-left">
+                    <div class="main-title">
+                        Твоя забота: рядом с теми, кто нуждается
+                    </div>
+                    <a href="/register" class="join-block">
+                        <span class="join-text">присоединиться</span>
+                    </a>
+                </div>
+                <div class="card-right">
+                    <div class="hero-image">
+                        <img src="{{ url_for('static', filename='hero-illustration.png') }}"
+                             alt="Помощь рядом"
+                             onerror="this.src='https://via.placeholder.com/553x830?text=Image'">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="mt-5">
-        <a href="/register" class="btn btn-primary btn-lg">Присоединиться</a>
+<div id="about" class="info-section">
+    <div class="about-block">
+        <div class="about-title">О проекте</div>
+        <div class="cards-container">
+            <div class="info-card">
+                <h3>Пожилые люди</h3>
+                <p>Одинокие бабушки и дедушки нуждаются в помощи по дому и общении. Вы можете приехать, помочь, поговорить и подарить тепло.</p>
+            </div>
+            <div class="info-card">
+                <h3>Животные</h3>
+                <p>Брошенные и больные животные нуждаются в уходе, лечении и добрых хозяевах. Поддержите приюты или помогите напрямую.</p>
+            </div>
+            <div class="info-card">
+                <h3>Дети</h3>
+                <p>Детям из сложных семей необходимы забота, вещи, игрушки и участие. Вы можете подарить радость ребёнку.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="about-project-section">
+    <div class="about-container">
+        <div class="about-main-block"></div>
+
+        <div class="about-main-text">
+            «МЫ РЯДОМ» — это цифровая платформа для адресной и прозрачной помощи в городе Воронеж.
+            Проект объединяет людей, готовых поддержать друг друга в нужный момент, и тех, кому эта поддержка действительно необходима. Каждая помощь становится видимой, а доверие — основой взаимодействия. Главные ценности проекта — забота, открытость, ответственность и участие. Мы верим, что сильное сообщество строится на простых поступках. Быть рядом — значит не оставаться в стороне. Присоединяйся к «МЫ РЯДОМ» и делай город добрее.
+        </div>
+
+        <div class="about-left-image"></div>
+
+        <div class="about-pink-block">
+            <div class="about-pink-text">
+                Данные о подопечных формируются при поддержке партнёрских организаций, которые работают на местах и сопровождают весь процесс — от оформления необходимых документов до проведения фотосъёмки.
+            </div>
+        </div>
+
+        <div class="about-right-image"></div>
+<div class="about-dark-text">
+            Каждый подопечный проходит проверку, а после верификации дополнительно подтверждается для обеспечения достоверности информации.
+        </div>
+        <div class="about-dark-block">
+
+        </div>
+
+
+    </div>
+</div>
+
+<div id="organizations">
+    <div class="org-block">
+        <div class="org-title">Организации</div>
+        <div class="org-text">Мы сотрудничаем с проверенными НКО, фондами и приютами. Присоединяйтесь к нам, чтобы делать добрые дела вместе!</div>
+        <a href="/register" class="org-button">Стать партнером</a>
     </div>
 </div>
 {% endblock %}
