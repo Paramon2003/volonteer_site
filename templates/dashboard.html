@@ -45,12 +45,9 @@
         padding: 12px 30px;
         display: inline-block;
         margin-bottom: 30px;
-        transform: rotate(180deg);
-        writing-mode: horizontal-tb;
     }
 
     .profile-title-badge span {
-        transform: rotate(180deg);
         display: inline-block;
         font-family: 'Gilroy', sans-serif;
         font-weight: 400;
@@ -70,9 +67,11 @@
         display: inline-block;
         width: 100%;
         max-width: 380px;
+        cursor: pointer;
+        border: none;
     }
 
-    .edit-profile-btn a {
+    .edit-profile-btn span {
         font-family: 'Gilroy', sans-serif;
         font-weight: 500;
         font-size: clamp(20px, 5vw, 32px);
@@ -94,28 +93,34 @@
         padding: 40px 35px;
         height: 100%;
         min-height: 853px;
+        display: flex;
+        flex-direction: column;
     }
 
-    /* Информация о пользователе */
-    .user-info-header {
+    /* Информационный блок (растянутый) */
+    .info-block {
+        flex: 1;
         display: flex;
-        align-items: baseline;
-        gap: 15px;
-        flex-wrap: wrap;
+        flex-direction: column;
+    }
+
+    /* Заголовок с именем */
+    .user-name-header {
         margin-bottom: 30px;
         padding-bottom: 20px;
         border-bottom: 2px solid rgba(255, 255, 255, 0.3);
     }
 
-    .user-info-label {
+    .user-name-label {
         font-family: 'Gilroy', sans-serif;
         font-weight: 500;
         font-size: clamp(20px, 5vw, 32px);
         line-height: 1.2;
         color: #474747;
+        margin-right: 15px;
     }
 
-    .user-info-name {
+    .user-name {
         font-family: 'Gilroy', sans-serif;
         font-weight: 700;
         font-size: clamp(24px, 5vw, 32px);
@@ -123,32 +128,80 @@
         color: #000000;
     }
 
-    /* Дополнительная информация */
-    .user-details {
-        margin-bottom: 40px;
+    /* Сетка информации (2 колонки) */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px 40px;
+        margin-bottom: 30px;
     }
 
-    .detail-item {
-        margin-bottom: 15px;
+    .info-item {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        flex-direction: column;
+        gap: 5px;
     }
 
-    .detail-label {
+    .info-label {
         font-family: 'Gilroy', sans-serif;
         font-weight: 500;
-        font-size: clamp(18px, 4vw, 24px);
+        font-size: clamp(14px, 3vw, 18px);
         color: #474747;
-        min-width: 120px;
+        letter-spacing: 0.5px;
     }
 
-    .detail-value {
+    .info-value {
         font-family: 'Gilroy', sans-serif;
-        font-weight: 400;
-        font-size: clamp(18px, 4vw, 24px);
+        font-weight: 600;
+        font-size: clamp(16px, 4vw, 22px);
         color: #000000;
         word-break: break-word;
+    }
+
+    .info-value.rating {
+        color: #FFD700;
+        text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+    }
+
+    .info-value.badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .badge-volunteer {
+        background: #5D4037;
+        color: white;
+    }
+
+    .badge-organization {
+        background: #FFE0B2;
+        color: black;
+    }
+
+    .badge-admin {
+        background: #f44336;
+        color: white;
+    }
+
+    /* Описание организации (занимает всю ширину) */
+    .org-description {
+        grid-column: span 2;
+        margin-top: 10px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+    }
+
+    .org-description .info-label {
+        margin-bottom: 8px;
+    }
+
+    .org-description .info-value {
+        line-height: 1.4;
+        font-weight: 400;
     }
 
     /* Блоки со статистикой */
@@ -156,12 +209,12 @@
         display: flex;
         flex-wrap: wrap;
         gap: 30px;
-        margin-top: 40px;
+        margin: 30px 0;
     }
 
     .stat-card {
         flex: 1;
-        min-width: 250px;
+        min-width: 200px;
         border-radius: 28.5px;
         overflow: hidden;
     }
@@ -175,7 +228,7 @@
     .stat-header h3 {
         font-family: 'Gilroy', sans-serif;
         font-weight: 500;
-        font-size: clamp(20px, 5vw, 32px);
+        font-size: clamp(18px, 4vw, 28px);
         line-height: 1.2;
         color: #FFFFFF;
         margin: 0;
@@ -187,9 +240,9 @@
 
     .stat-content {
         background: #5D4037;
-        padding: 30px 20px;
+        padding: 25px 20px;
         text-align: center;
-        min-height: 121px;
+        min-height: 110px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -202,29 +255,29 @@
     .stat-number {
         font-family: 'Gilroy', sans-serif;
         font-weight: 700;
-        font-size: clamp(36px, 8vw, 48px);
+        font-size: clamp(32px, 7vw, 48px);
         color: #FFFFFF;
     }
 
     .stat-label {
         font-family: 'Gilroy', sans-serif;
         font-weight: 500;
-        font-size: clamp(18px, 4vw, 32px);
+        font-size: clamp(14px, 3vw, 18px);
         color: #FFFFFF;
         margin-top: 5px;
     }
 
     /* Список задач */
     .tasks-list {
-        margin-top: 30px;
+        margin-top: 20px;
     }
 
     .tasks-title {
         font-family: 'Gilroy', sans-serif;
         font-weight: 600;
-        font-size: clamp(20px, 5vw, 28px);
+        font-size: clamp(18px, 4vw, 24px);
         color: #000000;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         padding-bottom: 10px;
         border-bottom: 2px solid rgba(255, 255, 255, 0.3);
     }
@@ -233,7 +286,7 @@
         background: rgba(255, 255, 255, 0.2);
         border-radius: 20px;
         padding: 15px 20px;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         transition: all 0.3s ease;
     }
 
@@ -393,18 +446,13 @@
             border-radius: 50px;
         }
 
-        .user-info-header {
-            flex-direction: column;
-            gap: 5px;
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
         }
 
-        .detail-item {
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .detail-label {
-            min-width: auto;
+        .org-description {
+            grid-column: span 1;
         }
 
         .reports-grid {
@@ -450,128 +498,167 @@
                     {% endif %}
                 </div>
 
-                <div class="edit-profile-btn">
-                    <a href="#" onclick="showEditModal()">изменить данные</a>
-                </div>
+                <button class="edit-profile-btn" onclick="showEditModal()">
+                    <span>изменить данные</span>
+                </button>
             </div>
 
             <!-- Правая колонка -->
             <div class="profile-right">
-                <!-- Информация о пользователе -->
-                <div class="user-info-header">
-                    <span class="user-info-label">имя:</span>
-                    <span class="user-info-name">{{ user_name }}</span>
-                </div>
+                <div class="info-block">
+                    <!-- Заголовок с именем -->
+                    <div class="user-name-header">
+                        <span class="user-name-label">имя:</span>
+                        <span class="user-name">{{ user_name }}</span>
+                    </div>
 
-                <div class="user-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Email:</span>
-                        <span class="detail-value">{{ user_email }}</div>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Телефон:</span>
-                        <span class="detail-value">{{ user_phone or 'Не указан' }}</div>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Роль:</span>
-                        <span class="detail-value">
-                            {% if user_role == 'admin' %}
-                                Администратор
-                            {% elif user_role == 'organization' %}
-                                Организация
-                            {% else %}
-                                Волонтер
-                            {% endif %}
-                        </span>
-                    </div>
-                    {% if user_role == 'organization' and organization_description %}
-                    <div class="detail-item">
-                        <span class="detail-label">Описание:</span>
-                        <span class="detail-value">{{ organization_description }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="detail-item">
-                        <span class="detail-label">Рейтинг:</span>
-                        <span class="detail-value">{{ "%.1f"|format(user_rating) }} ⭐</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">На сайте с:</span>
-                        <span class="detail-value">{{ created_at[:10] if created_at else 'Недавно' }}</span>
-                    </div>
-                </div>
-
-                <!-- Статистика -->
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <div class="stat-header completed">
-                            <h3>выполненные задачи</h3>
+                    <!-- Сетка информации (2 колонки) -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">📧 Email</span>
+                            <span class="info-value">{{ user_email }}</span>
                         </div>
-                        <div class="stat-content">
-                            <div>
-                                <div class="stat-number">{{ completed_tasks }}</div>
-                                <div class="stat-label">задач(и)</div>
+
+                        <div class="info-item">
+                            <span class="info-label">📱 Телефон</span>
+                            <span class="info-value">{{ user_phone or 'Не указан' }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">👤 Роль</span>
+                            <span class="info-value">
+                                {% if user_role == 'admin' %}
+                                    <span class="badge badge-admin">Администратор</span>
+                                {% elif user_role == 'organization' %}
+                                    <span class="badge badge-organization">Организация</span>
+                                {% else %}
+                                    <span class="badge badge-volunteer">Волонтер</span>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">⭐ Рейтинг</span>
+                            <span class="info-value rating">
+                                {{ "%.1f"|format(user_rating) }} / 5.0
+                                {% if user_rating >= 4.5 %}
+                                    🌟
+                                {% elif user_rating >= 3.5 %}
+                                    👍
+                                {% elif user_rating > 0 %}
+                                    💪
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">✅ Выполнено задач</span>
+                            <span class="info-value">{{ completed_tasks }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">📅 На сайте с</span>
+                            <span class="info-value">{{ created_at[:10] if created_at else 'Недавно' }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">🆔 ID пользователя</span>
+                            <span class="info-value">#{{ user_id }}</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">📊 Статус</span>
+                            <span class="info-value">
+                                {% if is_verified %}
+                                    <span style="color: #4CAF50;">✓ Подтвержден</span>
+                                {% else %}
+                                    <span style="color: #FF9800;">⏳ На проверке</span>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Описание организации (если есть) -->
+                        {% if user_role == 'organization' and organization_description %}
+                        <div class="org-description">
+                            <span class="info-label">🏢 О нас</span>
+                            <span class="info-value">{{ organization_description }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Статистика задач -->
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-header completed">
+                                <h3>выполненные задачи</h3>
+                            </div>
+                            <div class="stat-content">
+                                <div>
+                                    <div class="stat-number">{{ completed_tasks }}</div>
+                                    <div class="stat-label">задач(и)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <h3>задачи в процессе</h3>
+                            </div>
+                            <div class="stat-content in-progress">
+                                <div>
+                                    <div class="stat-number">{{ in_progress_tasks }}</div>
+                                    <div class="stat-label">задач(и)</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <h3>задачи в процессе</h3>
-                        </div>
-                        <div class="stat-content in-progress">
-                            <div>
-                                <div class="stat-number">{{ in_progress_tasks }}</div>
-                                <div class="stat-label">задач(и)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Активные задачи -->
-                {% if active_tasks %}
-                <div class="tasks-list">
-                    <div class="tasks-title">📋 Мои активные задачи</div>
-                    {% for task in active_tasks %}
-                    <div class="task-item">
-                        <div class="task-name">{{ task.title }}</div>
-                        <div class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</div>
-                        <div class="task-status status-{{ task.status|replace('_', '-') }}">
-                            {% if task.status == 'pending' %}Ожидает
-                            {% elif task.status == 'in_progress' %}В процессе
-                            {% elif task.status == 'completed' %}Выполнена
-                            {% else %}{{ task.status }}{% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Отчеты о помощи -->
-                <div class="reports-section">
-                    <div class="tasks-title">📸 Мои отчеты о помощи</div>
-                    {% if reports %}
-                    <div class="reports-grid">
-                        {% for report in reports %}
-                        <div class="report-card">
-                            {% if report.photo %}
-                                <img src="/{{ report.photo }}" alt="Фото отчета">
-                            {% else %}
-                                <img src="https://via.placeholder.com/280x150?text=Нет+фото" alt="Нет фото">
-                            {% endif %}
-                            <div class="report-needy">Кому: {{ report.needy_name }}</div>
-                            <div class="report-text">{{ report.text[:100] }}{% if report.text|length > 100 %}...{% endif %}</div>
-                            <div class="report-text" style="font-size: 12px; color: #666; margin-top: 8px;">
-                                {{ report.created_at[:10] if report.created_at else '' }}
+                    <!-- Активные задачи -->
+                    {% if active_tasks %}
+                    <div class="tasks-list">
+                        <div class="tasks-title">📋 Мои активные задачи</div>
+                        {% for task in active_tasks %}
+                        <div class="task-item">
+                            <div class="task-name">{{ task.title }}</div>
+                            <div class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</div>
+                            <div class="task-status status-{{ task.status|replace('_', '-') }}">
+                                {% if task.status == 'pending' %}⏳ Ожидает
+                                {% elif task.status == 'in_progress' %}🔄 В процессе
+                                {% elif task.status == 'completed' %}✅ Выполнена
+                                {% else %}{{ task.status }}{% endif %}
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="no-data">
-                        🤝 Пока нет отчетов. Помогите нуждающимся и оставьте отчет!
-                        <br>
-                        <a href="{{ url_for('needies_list') }}" style="color: #FF6F61; text-decoration: none;">→ Перейти к списку нуждающихся</a>
-                    </div>
                     {% endif %}
+
+                    <!-- Отчеты о помощи -->
+                    <div class="reports-section">
+                        <div class="tasks-title">📸 Мои отчеты о помощи</div>
+                        {% if reports %}
+                        <div class="reports-grid">
+                            {% for report in reports %}
+                            <div class="report-card">
+                                {% if report.photo %}
+                                    <img src="/{{ report.photo }}" alt="Фото отчета">
+                                {% else %}
+                                    <img src="https://via.placeholder.com/280x150?text=Нет+фото" alt="Нет фото">
+                                {% endif %}
+                                <div class="report-needy">👤 Кому: {{ report.needy_name }}</div>
+                                <div class="report-text">{{ report.text[:100] }}{% if report.text|length > 100 %}...{% endif %}</div>
+                                <div class="report-text" style="font-size: 12px; color: #666; margin-top: 8px;">
+                                    📅 {{ report.created_at[:10] if report.created_at else '' }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="no-data">
+                            🤝 Пока нет отчетов. Помогите нуждающимся и оставьте отчет!
+                            <br><br>
+                            <a href="{{ url_for('needies_list') }}" style="color: #FF6F61; text-decoration: none; font-weight: 600;">→ Перейти к списку нуждающихся</a>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -583,7 +670,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 30px;">
             <div class="modal-header" style="background: #FFA59D; border-radius: 30px 30px 0 0;">
-                <h5 class="modal-title" style="font-family: 'Gilroy', sans-serif; font-size: 28px;">Редактировать профиль</h5>
+                <h5 class="modal-title" style="font-family: 'Gilroy', sans-serif; font-size: 28px;">✏️ Редактировать профиль</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
@@ -605,15 +692,16 @@
                     <div class="mb-3">
                         <label class="form-label">Новое фото профиля</label>
                         <input type="file" name="photo" class="form-control" accept="image/*" style="border-radius: 20px;">
+                        <small class="text-muted">Рекомендуемый размер: квадратное изображение</small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Новый пароль (оставьте пустым, если не хотите менять)</label>
-                        <input type="password" name="new_password" class="form-control" style="border-radius: 20px;">
+                        <label class="form-label">Новый пароль</label>
+                        <input type="password" name="new_password" class="form-control" style="border-radius: 20px;" placeholder="Оставьте пустым, если не хотите менять">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 20px;">Отмена</button>
-                    <button type="submit" class="btn" style="background: #FF6F61; border-radius: 20px; color: white;">Сохранить</button>
+                    <button type="submit" class="btn" style="background: #FF6F61; border-radius: 20px; color: white;">💾 Сохранить</button>
                 </div>
             </form>
         </div>

@@ -304,16 +304,77 @@ def index():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
-        c.execute('SELECT name, photo FROM users WHERE id = ?', (session['user_id'],))
-        user = c.fetchone()
-        c.execute('''SELECT n.name, r.text, r.photo FROM reports r
-                     JOIN needies n ON n.id = r.needy_id
-                     WHERE r.user_id = ?''', (session['user_id'],))
-        reports = c.fetchall()
-    return render_template('dashboard.html', user=user, reports=reports)
 
+        # Получаем данные пользователя
+        c.execute('''SELECT id, name, email, phone, role, photo, rating, completed_tasks, 
+                            created_at, is_verified, organization_description 
+                     FROM users WHERE id = ?''', (session['user_id'],))
+        user_data = c.fetchone()
+
+        if not user_data:
+            session.clear()
+            return redirect(url_for('login'))
+
+        # Получаем отчеты пользователя с именами нуждающихся
+        c.execute('''SELECT r.text, r.photo, r.created_at, n.name as needy_name 
+                     FROM reports r
+                     JOIN needies n ON n.id = r.needy_id
+                     WHERE r.user_id = ?
+                     ORDER BY r.created_at DESC
+                     LIMIT 10''', (session['user_id'],))
+        reports_data = c.fetchall()
+
+        reports = []
+        for r in reports_data:
+            reports.append({
+                'text': r[0],
+                'photo': r[1],
+                'created_at': r[2],
+                'needy_name': r[3]
+            })
+
+        # Получаем активные задачи (в процессе или ожидающие)
+        c.execute('''SELECT id, title, description, status 
+                     FROM help_tasks 
+                     WHERE assigned_to = ? AND status IN ('pending', 'in_progress')
+                     ORDER BY created_at DESC
+                     LIMIT 5''', (session['user_id'],))
+        tasks_data = c.fetchall()
+
+        active_tasks = []
+        in_progress_count = 0
+        for t in tasks_data:
+            active_tasks.append({
+                'id': t[0],
+                'title': t[1],
+                'description': t[2] or '',
+                'status': t[3]
+            })
+            if t[3] == 'in_progress':
+                in_progress_count += 1
+
+        completed_tasks_count = user_data[7] if user_data[7] else 0
+        user_rating = user_data[6] if user_data[6] else 0
+        is_verified = user_data[9] if user_data[9] else 0
+
+        return render_template('dashboard.html',
+                               user_id=user_data[0],
+                               user_name=user_data[1],
+                               user_email=user_data[2],
+                               user_phone=user_data[3],
+                               user_role=user_data[4],
+                               user_photo=user_data[5],
+                               user_rating=user_rating,
+                               completed_tasks=completed_tasks_count,
+                               in_progress_tasks=in_progress_count,
+                               created_at=user_data[8],
+                               is_verified=is_verified,
+                               organization_description=user_data[10] if len(user_data) > 10 else None,
+                               reports=reports,
+                               active_tasks=active_tasks)
 
 # app.py - обновленный список нуждающихся
 
@@ -761,6 +822,64 @@ def delete_user(user_id):
 
         flash('Пользователь удален')
         return redirect(url_for('admin_users'))
+
+
+@app.route('/update_profile', methods=['POST'])
+def update_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    name = request.form.get('name')
+    phone = request.form.get('phone')
+    new_password = request.form.get('new_password')
+    organization_description = request.form.get('organization_description')
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Обновляем имя и телефон
+        updates = []
+        params = []
+
+        updates.append("name = ?")
+        params.append(name)
+
+        updates.append("phone = ?")
+        params.append(phone)
+
+        # Обновляем описание для организации
+        if organization_description is not None:
+            updates.append("organization_description = ?")
+            params.append(organization_description)
+
+        # Обновляем пароль, если указан
+        if new_password:
+            from werkzeug.security import generate_password_hash
+            updates.append("password = ?")
+            params.append(generate_password_hash(new_password))
+
+        # Обновляем фото, если загружено
+        if 'photo' in request.files:
+            f = request.files['photo']
+            if f and f.filename:
+                from werkzeug.utils import secure_filename
+                filename = secure_filename(f.filename)
+                photo_path = os.path.join(UPLOAD_FOLDER, filename)
+                f.save(photo_path)
+                updates.append("photo = ?")
+                params.append(photo_path)
+
+        params.append(user_id)
+
+        if updates:
+            query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+            c.execute(query, params)
+            conn.commit()
+
+        flash('Профиль успешно обновлен!', 'success')
+
+    return redirect(url_for('dashboard'))
 
 # --- Запуск ---
 if __name__ == '__main__':
