@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block title %}Организации на проверке{% endblock %}
+{% block content %}
+<h2 class="mt-4">Организации на проверке</h2>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="/admin/users">Все пользователи</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/admin/organizations">Организации на проверке</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/admin/needies">Нуждающиеся на проверке</a>
+    </li>
+</ul>
+
+{% if organizations %}
+    <div class="row">
+        {% for org in organizations %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ org.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ org.email }}</p>
+                    <p><strong>Телефон:</strong> {{ org.phone or '-' }}</p>
+                    <p><strong>Город:</strong> {{ org.city or '-' }}</p>
+                    <p><strong>Дата регистрации:</strong> {{ org.created_at[:19] if org.created_at else '-' }}</p>
+                    <p><strong>Описание:</strong></p>
+                    <p class="text-muted">{{ org.organization_description or 'Нет описания' }}</p>
+
+                    {% if org.photo %}
+                        <img src="/{{ org.photo }}" class="img-thumbnail mb-3" style="max-height: 150px;">
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="/admin/verify_organization/{{ org.id }}" class="btn btn-success">Подтвердить</a>
+                    <a href="/admin/reject_organization/{{ org.id }}" class="btn btn-danger" onclick="return confirm('Отклонить заявку организации {{ org.name }}?')">Отклонить</a>
+                    <a href="/admin/user/{{ org.id }}" class="btn btn-info">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Нет организаций, ожидающих проверки.
+    </div>
+{% endif %}
+{% endblock %}

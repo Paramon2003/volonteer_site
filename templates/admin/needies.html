@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+{% block title %}Нуждающиеся на проверке{% endblock %}
+{% block content %}
+<h2 class="mt-4">Нуждающиеся на проверке</h2>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="/admin/users">Все пользователи</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/admin/organizations">Организации на проверке</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/admin/needies">Нуждающиеся на проверке</a>
+    </li>
+</ul>
+
+{% if needies %}
+    <div class="row">
+        {% for needy in needies %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                {% if needy.photo %}
+                    <img src="/{{ needy.photo }}" class="card-img-top" style="max-height: 200px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ needy.name }}</h5>
+                    <p class="card-text">
+                        <strong>Категория:</strong>
+                        {% if needy.tag == 'elderly' %}Пожилые люди
+                        {% elif needy.tag == 'animals' %}Животные
+                        {% elif needy.tag == 'children' %}Дети
+                        {% elif needy.tag == 'disabled' %}Люди с ОВЗ
+                        {% elif needy.tag == 'homeless' %}Бездомные
+                        {% else %}{{ needy.tag }}
+                        {% endif %}
+                    </p>
+                    <p><strong>Описание:</strong> {{ needy.description[:200] }}{% if needy.description|length > 200 %}...{% endif %}</p>
+                    <p><strong>Адрес:</strong> {{ needy.address }}</p>
+                    <p><strong>Срочность:</strong>
+                        {% if needy.urgency_level == 1 %}
+                            <span class="badge bg-danger">Высокая</span>
+                        {% elif needy.urgency_level == 2 %}
+                            <span class="badge bg-warning">Средняя</span>
+                        {% else %}
+                            <span class="badge bg-info">Низкая</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Добавлено:</strong> {{ needy.created_at[:19] if needy.created_at else '-' }}</p>
+
+                    {% if needy.organization_id %}
+                        <p><strong>Организация:</strong> {{ needy.org_name }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="/admin/approve_needy/{{ needy.id }}" class="btn btn-success">Одобрить</a>
+                    <a href="/admin/reject_needy/{{ needy.id }}" class="btn btn-danger" onclick="return confirm('Отклонить заявку?')">Отклонить</a>
+                    <a href="/admin/needy/{{ needy.id }}" class="btn btn-info">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Нет нуждающихся, ожидающих проверки.
+    </div>
+{% endif %}
+{% endblock %}

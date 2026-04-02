@@ -432,12 +432,12 @@ def donate(needy_id):
 
 
 #административные маршруты
+
 @app.route('/admin/users')
 def admin_users():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    # Проверка прав администратора
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
         c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
@@ -447,13 +447,106 @@ def admin_users():
             flash('Доступ запрещен')
             return redirect(url_for('index'))
 
-        c.execute('SELECT id, name, email, role, is_verified, rating FROM users ORDER BY created_at DESC')
-        users = c.fetchall()
+        # Получаем всех пользователей, кроме админов? включаем всех
+        c.execute('''SELECT id, name, email, phone, role, is_verified, rating, 
+                            completed_tasks, created_at
+                     FROM users 
+                     ORDER BY created_at DESC''')
+        users_data = c.fetchall()
 
-        users_list = [{'id': u[0], 'name': u[1], 'email': u[2], 'role': u[3],
-                       'is_verified': u[4], 'rating': u[5]} for u in users]
+        users = []
+        for u in users_data:
+            users.append({
+                'id': u[0],
+                'name': u[1],
+                'email': u[2],
+                'phone': u[3],
+                'role': u[4],
+                'is_verified': u[5],
+                'rating': u[6],
+                'completed_tasks': u[7],
+                'created_at': u[8]
+            })
 
-        return render_template('admin/users.html', users=users_list)
+        return render_template('admin/users.html', users=users, active_tab='users')
+
+
+@app.route('/admin/organizations')
+def admin_organizations():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Получаем неподтвержденные организации
+        c.execute('''SELECT id, name, email, phone, organization_description, 
+                            photo, created_at
+                     FROM users 
+                     WHERE role = 'organization' AND is_verified = 0
+                     ORDER BY created_at DESC''')
+        orgs_data = c.fetchall()
+
+        organizations = []
+        for o in orgs_data:
+            organizations.append({
+                'id': o[0],
+                'name': o[1],
+                'email': o[2],
+                'phone': o[3],
+                'organization_description': o[4],
+                'photo': o[5],
+                'created_at': o[6]
+            })
+
+        return render_template('admin/organizations.html', organizations=organizations, active_tab='organizations')
+
+
+@app.route('/admin/needies')
+def admin_needies():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Получаем неподтвержденных нуждающихся
+        c.execute('''SELECT n.id, n.name, n.tag, n.photo, n.description, n.address, 
+                            n.urgency_level, n.created_at, n.organization_id, u.name as org_name
+                     FROM needies n
+                     LEFT JOIN users u ON n.organization_id = u.id
+                     WHERE n.status = 'pending'
+                     ORDER BY n.created_at DESC''')
+        needies_data = c.fetchall()
+
+        needies = []
+        for n in needies_data:
+            needies.append({
+                'id': n[0],
+                'name': n[1],
+                'tag': n[2],
+                'photo': n[3],
+                'description': n[4],
+                'address': n[5],
+                'urgency_level': n[6],
+                'created_at': n[7],
+                'organization_id': n[8],
+                'org_name': n[9] if n[9] else 'Не указана'
+            })
+
+        return render_template('admin/needies.html', needies=needies, active_tab='needies')
 
 
 @app.route('/admin/verify_organization/<int:org_id>')
@@ -474,6 +567,159 @@ def verify_organization(org_id):
         conn.commit()
 
         flash('Организация подтверждена')
+        return redirect(url_for('admin_organizations'))
+
+
+@app.route('/admin/reject_organization/<int:org_id>')
+def reject_organization(org_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Удаляем организацию (или помечаем как отклоненную)
+        c.execute('DELETE FROM users WHERE id = ? AND role = "organization" AND is_verified = 0', (org_id,))
+        conn.commit()
+
+        flash('Заявка организации отклонена и удалена')
+        return redirect(url_for('admin_organizations'))
+
+
+@app.route('/admin/approve_needy/<int:needy_id>')
+def approve_needy(needy_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        c.execute('UPDATE needies SET status = "approved" WHERE id = ?', (needy_id,))
+        conn.commit()
+
+        flash('Нуждающийся одобрен и опубликован')
+        return redirect(url_for('admin_needies'))
+
+
+@app.route('/admin/reject_needy/<int:needy_id>')
+def reject_needy(needy_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user_role = c.fetchone()
+
+        if not user_role or user_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        c.execute('DELETE FROM needies WHERE id = ? AND status = "pending"', (needy_id,))
+        conn.commit()
+
+        flash('Заявка нуждающегося отклонена и удалена')
+        return redirect(url_for('admin_needies'))
+
+
+@app.route('/admin/user/<int:user_id>')
+def admin_user_detail(user_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        admin_role = c.fetchone()
+
+        if not admin_role or admin_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Получаем информацию о пользователе
+        c.execute('''SELECT id, name, email, phone, role, is_verified, rating, 
+                            completed_tasks, photo, created_at, last_login, 
+                            organization_description
+                     FROM users WHERE id = ?''', (user_id,))
+        user_data = c.fetchone()
+
+        if not user_data:
+            flash('Пользователь не найден')
+            return redirect(url_for('admin_users'))
+
+        user = {
+            'id': user_data[0],
+            'name': user_data[1],
+            'email': user_data[2],
+            'phone': user_data[3],
+            'role': user_data[4],
+            'is_verified': user_data[5],
+            'rating': user_data[6],
+            'completed_tasks': user_data[7],
+            'photo': user_data[8],
+            'created_at': user_data[9],
+            'last_login': user_data[10],
+            'organization_description': user_data[11]
+        }
+
+        # Если это организация, получаем добавленных нуждающихся
+        needies = []
+        if user['role'] == 'organization':
+            c.execute('''SELECT id, name, address, status 
+                         FROM needies 
+                         WHERE organization_id = ?
+                         ORDER BY created_at DESC''', (user_id,))
+            needies_data = c.fetchall()
+            for n in needies_data:
+                needies.append({
+                    'id': n[0],
+                    'name': n[1],
+                    'address': n[2],
+                    'status': n[3]
+                })
+
+        return render_template('admin/user_detail.html', user=user, needies=needies)
+
+
+@app.route('/admin/delete_user/<int:user_id>')
+def delete_user(user_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        admin_role = c.fetchone()
+
+        if not admin_role or admin_role[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Нельзя удалить админа
+        c.execute('SELECT role FROM users WHERE id = ?', (user_id,))
+        user_role = c.fetchone()
+
+        if user_role and user_role[0] == 'admin':
+            flash('Нельзя удалить администратора')
+            return redirect(url_for('admin_users'))
+
+        # Удаляем пользователя
+        c.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.commit()
+
+        flash('Пользователь удален')
         return redirect(url_for('admin_users'))
 
 # --- Запуск ---
