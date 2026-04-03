@@ -148,6 +148,15 @@
         font-size: clamp(14px, 3vw, 18px);
         color: #474747;
         letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-label img {
+        width: 20px;
+        height: 20px;
+        display: inline-block;
     }
 
     .info-value {
@@ -158,9 +167,29 @@
         word-break: break-word;
     }
 
+    /* Стили для статуса с картинками */
+    .status-verified, .status-pending-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-verified img, .status-pending-check img {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
     .info-value.rating {
         color: #FFD700;
         text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .info-value.rating img {
+        width: 22px;
+        height: 22px;
     }
 
     .info-value.badge {
@@ -280,6 +309,14 @@
         margin-bottom: 15px;
         padding-bottom: 10px;
         border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .tasks-title img {
+        width: 28px;
+        height: 28px;
     }
 
     .task-item {
@@ -316,6 +353,15 @@
         border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+    }
+
+    .task-status img {
+        width: 14px;
+        height: 14px;
     }
 
     .status-pending {
@@ -371,6 +417,14 @@
         font-size: 16px;
         color: #000;
         margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .report-needy img {
+        width: 18px;
+        height: 18px;
     }
 
     .report-text {
@@ -380,6 +434,7 @@
         line-height: 1.4;
     }
 
+    /* Стили для блока "нет отчетов" */
     .no-data {
         text-align: center;
         padding: 40px;
@@ -388,6 +443,19 @@
         font-family: 'Gilroy', sans-serif;
         font-size: 18px;
         color: #666;
+    }
+
+    .no-data img {
+        width: 48px !important;
+        height: 48px !important;
+        display: inline-block;
+        margin-bottom: 10px;
+        vertical-align: middle;
+    }
+
+    .no-data a img {
+        width: auto !important;
+        height: auto !important;
     }
 
     /* Адаптивность */
@@ -458,6 +526,11 @@
         .reports-grid {
             grid-template-columns: 1fr;
         }
+
+        .no-data img {
+            width: 40px !important;
+            height: 40px !important;
+        }
     }
 
     @media (max-width: 480px) {
@@ -477,6 +550,11 @@
         .stat-content {
             padding: 20px;
             min-height: 100px;
+        }
+
+        .no-data img {
+            width: 36px !important;
+            height: 36px !important;
         }
     }
 </style>
@@ -515,17 +593,17 @@
                     <!-- Сетка информации (2 колонки) -->
                     <div class="info-grid">
                         <div class="info-item">
-                            <span class="info-label">📧 Email</span>
+                            <span class="info-label"><img src="static/Email.png" alt="email"> Email</span>
                             <span class="info-value">{{ user_email }}</span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">📱 Телефон</span>
+                            <span class="info-label"><img src="static/Phone.png" alt="phone"> Телефон</span>
                             <span class="info-value">{{ user_phone or 'Не указан' }}</span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">👤 Роль</span>
+                            <span class="info-label"><img src="static/Profile.png" alt="role"> Роль</span>
                             <span class="info-value">
                                 {% if user_role == 'admin' %}
                                     <span class="badge badge-admin">Администратор</span>
@@ -538,41 +616,41 @@
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">⭐ Рейтинг</span>
+                            <span class="info-label"><img src="static/Star.png" alt="rating"> Рейтинг</span>
                             <span class="info-value rating">
                                 {{ "%.1f"|format(user_rating) }} / 5.0
                                 {% if user_rating >= 4.5 %}
-                                    🌟
+                                    <img src="static/Star.png" alt="star">
                                 {% elif user_rating >= 3.5 %}
-                                    👍
+                                    <img src="static/Like.png" alt="thumbs_up">
                                 {% elif user_rating > 0 %}
-                                    💪
+                                    <img src="static/Heart.png" alt="muscle">
                                 {% endif %}
                             </span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">✅ Выполнено задач</span>
+                            <span class="info-label"><img src="static/CheckSquare.png" alt="completed"> Выполнено задач</span>
                             <span class="info-value">{{ completed_tasks }}</span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">📅 На сайте с</span>
+                            <span class="info-label"><img src="static/Calendar.png" alt="calendar"> На сайте с</span>
                             <span class="info-value">{{ created_at[:10] if created_at else 'Недавно' }}</span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">🆔 ID пользователя</span>
+                            <span class="info-label"><img src="static/ProfileCircle.png" alt="id"> ID пользователя</span>
                             <span class="info-value">#{{ user_id }}</span>
                         </div>
 
                         <div class="info-item">
-                            <span class="info-label">📊 Статус</span>
+                            <span class="info-label"><img src="static/Certificate.png" alt="status"> Статус</span>
                             <span class="info-value">
                                 {% if is_verified %}
-                                    <span style="color: #4CAF50;">✓ Подтвержден</span>
+                                    <span class="status-verified" style="color: #4CAF50;"><img src="static/CheckSquare.png" alt="check" style="width: 18px; height: 18px;"> Подтвержден</span>
                                 {% else %}
-                                    <span style="color: #FF9800;">⏳ На проверке</span>
+                                    <span class="status-pending-check" style="color: #FF9800;"><img src="static/History.png" alt="pending" style="width: 18px; height: 18px;"> На проверке</span>
                                 {% endif %}
                             </span>
                         </div>
@@ -580,7 +658,7 @@
                         <!-- Описание организации (если есть) -->
                         {% if user_role == 'organization' and organization_description %}
                         <div class="org-description">
-                            <span class="info-label">🏢 О нас</span>
+                            <span class="info-label"><img src="static/Store.png" alt="organization"> О нас</span>
                             <span class="info-value">{{ organization_description }}</span>
                         </div>
                         {% endif %}
@@ -615,15 +693,18 @@
                     <!-- Активные задачи -->
                     {% if active_tasks %}
                     <div class="tasks-list">
-                        <div class="tasks-title">📋 Мои активные задачи</div>
+                        <div class="tasks-title"><img src="static/News.png" alt="tasks"> Мои активные задачи</div>
                         {% for task in active_tasks %}
                         <div class="task-item">
                             <div class="task-name">{{ task.title }}</div>
                             <div class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</div>
                             <div class="task-status status-{{ task.status|replace('_', '-') }}">
-                                {% if task.status == 'pending' %}⏳ Ожидает
-                                {% elif task.status == 'in_progress' %}🔄 В процессе
-                                {% elif task.status == 'completed' %}✅ Выполнена
+                                {% if task.status == 'pending' %}
+                                    <img src="static/History.png" alt="pending"> Ожидает
+                                {% elif task.status == 'in_progress' %}
+                                    <img src="static/Synchronize.png" alt="in_progress"> В процессе
+                                {% elif task.status == 'completed' %}
+                                    <img src="static/CheckSquare.png" alt="completed"> Выполнена
                                 {% else %}{{ task.status }}{% endif %}
                             </div>
                         </div>
@@ -633,7 +714,7 @@
 
                     <!-- Отчеты о помощи -->
                     <div class="reports-section">
-                        <div class="tasks-title">📸 Мои отчеты о помощи</div>
+                        <div class="tasks-title"><img src="static/Camera.png" alt="reports"> Мои отчеты о помощи</div>
                         {% if reports %}
                         <div class="reports-grid">
                             {% for report in reports %}
@@ -643,18 +724,19 @@
                                 {% else %}
                                     <img src="https://via.placeholder.com/280x150?text=Нет+фото" alt="Нет фото">
                                 {% endif %}
-                                <div class="report-needy">👤 Кому: {{ report.needy_name }}</div>
+                                <div class="report-needy"><img src="static/Profile.png" alt="user"> Кому: {{ report.needy_name }}</div>
                                 <div class="report-text">{{ report.text[:100] }}{% if report.text|length > 100 %}...{% endif %}</div>
                                 <div class="report-text" style="font-size: 12px; color: #666; margin-top: 8px;">
-                                    📅 {{ report.created_at[:10] if report.created_at else '' }}
+                                    <img src="static/Calendar.png" alt="date" style="width: 14px; height: 14px;"> {{ report.created_at[:10] if report.created_at else '' }}
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                         {% else %}
                         <div class="no-data">
-                            🤝 Пока нет отчетов. Помогите нуждающимся и оставьте отчет!
-                            <br><br>
+                            <img src="static/Lightning.png" alt="no_reports">
+                            <div>Пока нет отчетов. Помогите нуждающимся и оставьте отчет!</div>
+                            <br>
                             <a href="{{ url_for('needies_list') }}" style="color: #FF6F61; text-decoration: none; font-weight: 600;">→ Перейти к списку нуждающихся</a>
                         </div>
                         {% endif %}
@@ -670,7 +752,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 30px;">
             <div class="modal-header" style="background: #FFA59D; border-radius: 30px 30px 0 0;">
-                <h5 class="modal-title" style="font-family: 'Gilroy', sans-serif; font-size: 28px;">✏️ Редактировать профиль</h5>
+                <h5 class="modal-title" style="font-family: 'Gilroy', sans-serif; font-size: 28px;"><img src="static/Edit.png" alt="edit" style="width: 28px; height: 28px;"> Редактировать профиль</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
@@ -701,7 +783,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 20px;">Отмена</button>
-                    <button type="submit" class="btn" style="background: #FF6F61; border-radius: 20px; color: white;">💾 Сохранить</button>
+                    <button type="submit" class="btn" style="background: #FF6F61; border-radius: 20px; color: white;"><img src="static/Heart.png" alt="save" style="width: 18px; height: 18px;"> Сохранить</button>
                 </div>
             </form>
         </div>
