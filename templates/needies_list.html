@@ -1,30 +1,634 @@
 {% extends "layout.html" %}
 {% block title %}Нуждающиеся{% endblock %}
 {% block content %}
-<div class="container">
-    <h1>Все нуждающиеся</h1>
+<style>
+    /* Сброс и базовые стили */
+    .needies-page {
+        min-height: 100vh;
+        background: url('{{ url_for("static", filename="hero-bg.png") }}') center/cover no-repeat;
+        position: relative;
+        overflow-x: hidden;
+    }
 
-    <div class="mb-3">
-        <a href="{{ url_for('needies_list', view='list') }}" class="btn btn-outline-primary">Список</a>
-        <a href="{{ url_for('needies_list', view='map') }}" class="btn btn-outline-primary">Карта</a>
-    </div>
+    /* Фоновое изображение */
+    .needies-page::before {
+        content: '';
+        position: absolute;
+        width: 1536px;
+        height: 1024px;
+        left: -48px;
+        top: 0;
+        background: url('{{ url_for("static", filename="hero-bg.png") }}') center/cover no-repeat;
+        opacity: 0.08;
+        pointer-events: none;
+        z-index: 0;
+    }
 
-    <div class="row">
-        {% for needy in needies %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                {% if needy[3] %}
-                <img src="/{{ needy[3] }}" class="img-thumbnail" alt="Фото">
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ needy[1] }}</h5>
-                    <p class="card-text">{{ needy[4][:100] }}{% if needy[4]|length > 100 %}...{% endif %}</p>
-                    <p class="text-muted">{{ needy[2] }}</p>
-                    <a href="{{ url_for('needy_profile', id=needy[0]) }}" class="btn btn-primary">Подробнее</a>
+    /* Контейнер */
+    .needies-container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 40px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Блок с фильтрами */
+    .filters-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 57px;
+        margin-top: 131px;
+        margin-bottom: 34px;
+    }
+
+    .filter-btn {
+        width: 249px;
+        max-width: 100%;
+        height: 55px;
+        border-radius: 88px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 32px;
+        line-height: 38px;
+        color: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        background: none;
+    }
+
+    .filter-btn.active {
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.5), 0 4px 15px rgba(0,0,0,0.2);
+        transform: scale(1.02);
+    }
+
+    .filter-list { background: #A17F74; }
+    .filter-list:hover, .filter-list.active { background: #8b6a5f; }
+    .filter-map { background: #7F5C52; }
+    .filter-map:hover, .filter-map.active { background: #6b4c43; }
+    .filter-filter { background: #5D4037; }
+    .filter-filter:hover, .filter-filter.active { background: #4a332b; }
+
+    /* Сетка карточек */
+    .cards-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 60px;
+        justify-content: center;
+        margin-bottom: 60px;
+    }
+
+    /* Карточка нуждающегося */
+    .needy-card {
+        width: 403px;
+        max-width: 100%;
+        background: #FFA59D;
+        border-radius: 88px;
+        padding: 0 0 30px 0;
+        transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .needy-card:hover {
+        transform: translateY(-12px);
+        box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Фото (круглое) */
+    .card-photo {
+        width: 224px;
+        height: 224px;
+        margin: 44px auto 0;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease;
+    }
+
+    .needy-card:hover .card-photo {
+        transform: scale(1.02);
+    }
+
+    .card-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Верхняя панель: тег слева, бейдж справа */
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 20px 0 20px;
+        gap: 10px;
+    }
+
+    /* Категория (тег) - теперь слева */
+    .card-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #FF6F61;
+        border-radius: 17px;
+        padding: 6px 16px 6px 12px;
+        width: fit-content;
+        flex-shrink: 0;
+    }
+
+    .tag-icon {
+        width: 23px;
+        height: 23px;
+        background: #D9D9D9;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .tag-text {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 16px;
+        line-height: 19px;
+        color: #FFFFFF;
+    }
+
+    /* Бейдж "Собрано" - теперь справа на одном уровне с тегом */
+    .collected-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #FF6F61;
+        border-radius: 12px;
+        padding: 6px 12px;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 17px;
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        flex-shrink: 0;
+    }
+
+    .collected-badge .badge-dot {
+        width: 19px;
+        height: 19px;
+        background: #FF3030;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* Имя */
+    .card-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 32px;
+        line-height: 39px;
+        color: #000000;
+        text-align: center;
+        margin: 20px 20px 10px;
+        word-break: break-word;
+    }
+
+    /* Описание */
+    .card-description {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 24px;
+        color: #000000;
+        padding: 0 18px;
+        margin-bottom: 20px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 72px;
+    }
+
+    /* Тип сбора */
+    .collection-type {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 17px;
+        color: #474747;
+        padding: 0 18px;
+        margin-bottom: 5px;
+    }
+
+    /* Прогресс-бар */
+    .progress-wrapper {
+        padding: 0 18px;
+        margin-bottom: 8px;
+    }
+
+    .progress-bg {
+        background: #A07F74;
+        border-radius: 4px;
+        height: 8px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        background: #FF6F61;
+        border-radius: 4px;
+        height: 8px;
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+
+    /* Суммы */
+    .funds-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 18px;
+        margin-bottom: 15px;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 17px;
+        color: #000000;
+    }
+
+    .collected, .goal { color: #000; }
+
+    /* Кнопка "подробнее" */
+    .card-button {
+        display: block;
+        width: 252px;
+        max-width: calc(100% - 40px);
+        margin: 20px auto 0;
+        background: #5D4037;
+        border-radius: 34px;
+        padding: 12px 0;
+        text-align: center;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 32px;
+        line-height: 39px;
+        color: #FFFFFF;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .card-button:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+        color: #FFFFFF;
+    }
+
+    /* Пустое состояние */
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        background: #FFF6F0;
+        border-radius: 88px;
+        margin: 40px 0;
+    }
+
+    .empty-state h3 {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 32px;
+        color: #5D4037;
+    }
+
+    /* Модальное окно */
+    .filter-modal .modal-content {
+        border-radius: 48px;
+        background: #FFF6F0;
+    }
+
+    .filter-modal .modal-header {
+        background: #FFA59D;
+        border-radius: 48px 48px 0 0;
+        padding: 20px 30px;
+    }
+
+    .filter-modal .modal-title {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: #000;
+    }
+
+    .filter-option { margin-bottom: 20px; }
+    .filter-option label {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .filter-select {
+        width: 100%;
+        padding: 12px 20px;
+        border-radius: 46px;
+        border: 2px solid #FFA59D;
+        font-family: 'Gilroy', sans-serif;
+        font-size: 16px;
+        background: white;
+    }
+
+    /* Скрытие скроллбара для Webkit браузеров (Chrome, Safari) */
+    .cards-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Для Firefox */
+    .cards-grid {
+        scrollbar-width: none;
+    }
+
+    /* Для IE/Edge */
+    .cards-grid {
+        -ms-overflow-style: none;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 1200px) {
+        .needies-container { padding: 0 30px; }
+        .filters-bar { gap: 30px; justify-content: center; }
+        .filter-btn { width: 200px; font-size: 26px; }
+        .cards-grid { gap: 40px; }
+        .needy-card { width: 360px; }
+        .card-name { font-size: 28px; }
+        .card-button { font-size: 28px; width: 220px; }
+    }
+
+    @media (max-width: 992px) {
+        .needies-container { padding: 0 20px; }
+        .filters-bar { margin-top: 100px; gap: 20px; }
+        .filter-btn { width: 170px; font-size: 22px; height: 48px; }
+        .cards-grid { gap: 30px; }
+        .needy-card { width: 320px; }
+        .card-photo { width: 180px; height: 180px; margin-top: 30px; }
+        .card-name { font-size: 24px; line-height: 30px; }
+        .card-description { font-size: 16px; line-height: 20px; min-height: 60px; }
+        .card-button { font-size: 24px; width: 200px; padding: 8px 0; }
+        .card-header-row { margin: 15px 15px 0 15px; }
+    }
+
+    @media (max-width: 768px) {
+        .needies-container { padding: 0 15px; }
+        .filters-bar { margin-top: 80px; gap: 15px; justify-content: center; }
+        .filter-btn { width: 130px; font-size: 18px; height: 42px; }
+        .cards-grid { gap: 25px; }
+        .needy-card { width: 100%; max-width: 360px; margin: 0 auto; }
+        .card-photo { width: 160px; height: 160px; }
+        .card-name { font-size: 22px; }
+        .card-description { font-size: 15px; -webkit-line-clamp: 2; min-height: 40px; }
+        .card-button { font-size: 22px; width: 180px; }
+        .tag-text, .collected-badge { font-size: 12px; }
+        .card-tag { padding: 4px 12px 4px 8px; }
+        .collected-badge { padding: 4px 10px; }
+    }
+
+    @media (max-width: 480px) {
+        .filters-bar { flex-wrap: wrap; gap: 12px; margin-top: 60px; }
+        .filter-btn { width: calc(33% - 12px); min-width: 100px; font-size: 16px; height: 38px; }
+        .card-photo { width: 130px; height: 130px; margin-top: 20px; }
+        .card-name { font-size: 20px; margin: 12px 12px 6px; }
+        .card-description { font-size: 13px; padding: 0 12px; }
+        .collection-type { padding: 0 12px; font-size: 12px; }
+        .progress-wrapper { padding: 0 12px; }
+        .funds-row { padding: 0 12px; font-size: 12px; }
+        .card-button { font-size: 18px; width: 160px; padding: 8px 0; margin-top: 15px; }
+        .card-header-row { margin: 12px 12px 0 12px; }
+        .tag-text, .collected-badge { font-size: 10px; }
+        .collected-badge .badge-dot { width: 12px; height: 12px; }
+        .tag-icon { width: 18px; height: 18px; }
+    }
+
+    /* Анимация */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .needy-card {
+        animation: fadeInUp 0.5s ease forwards;
+        opacity: 0;
+    }
+    .needy-card:nth-child(1) { animation-delay: 0.1s; }
+    .needy-card:nth-child(2) { animation-delay: 0.2s; }
+    .needy-card:nth-child(3) { animation-delay: 0.3s; }
+    .needy-card:nth-child(4) { animation-delay: 0.4s; }
+    .needy-card:nth-child(5) { animation-delay: 0.5s; }
+    .needy-card:nth-child(6) { animation-delay: 0.6s; }
+</style>
+
+<div class="needies-page">
+    <div class="needies-container">
+        <!-- Три кнопки -->
+        <div class="filters-bar">
+            <button class="filter-btn filter-list active" onclick="switchView('list')">список</button>
+            <button class="filter-btn filter-map" onclick="switchView('map')">карта</button>
+            <button class="filter-btn filter-filter" data-bs-toggle="modal" data-bs-target="#filterModal">фильтр</button>
+        </div>
+
+        <!-- Список карточек -->
+        <div id="listView">
+            <div class="cards-grid" id="cardsGrid">
+                {% for needy in needies %}
+                <div class="needy-card" data-category="{{ needy[2] }}" data-urgency="{{ needy[8] }}">
+                    <!-- Фото -->
+                    <div class="card-photo">
+                        {% if needy[3] %}
+                            <img src="/{{ needy[3] }}" alt="{{ needy[1] }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/224x224?text=Фото" alt="Нет фото">
+                        {% endif %}
+                    </div>
+
+                    <!-- Верхняя панель: тег слева, бейдж справа -->
+                    <div class="card-header-row">
+                        <!-- Категория (тег) -->
+                        <div class="card-tag">
+                            <span class="tag-icon"></span>
+                            <span class="tag-text">{{ needy[2] }}</span>
+                        </div>
+
+                        <!-- Бейдж "Собрано" -->
+                        {% set progress = ((needy[9] / needy[10]) * 100) if needy[10] and needy[10] > 0 else 0 %}
+                        {% if progress > 0 %}
+                        <div class="collected-badge">
+                            <span class="badge-dot"></span>
+                            Собрано {{ "%.0f"|format(progress) }}%
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Имя -->
+                    <div class="card-name">{{ needy[1] }}</div>
+
+                    <!-- Описание -->
+                    <div class="card-description">{{ needy[4][:100] }}{% if needy[4]|length > 100 %}...{% endif %}</div>
+
+                    <!-- Тип сбора -->
+                    <div class="collection-type">
+                        {{ needy[11] }}
+                    </div>
+
+                    <!-- Прогресс-бар -->
+                    <div class="progress-wrapper">
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: {{ ((needy[9] / needy[10]) * 100) if needy[10] and needy[10] > 0 else 0 }}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Суммы -->
+                    <div class="funds-row">
+                        <span class="collected">{{ needy[9]|int if needy[9] else 0 }} ₽</span>
+                        <span class="goal">из {{ needy[10]|int if needy[10] else 0 }} ₽</span>
+                    </div>
+
+                    <!-- Кнопка подробнее -->
+                    <a href="{{ url_for('needy_profile', id=needy[0]) }}" class="card-button">подробнее</a>
                 </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
+
+        <!-- Карта -->
+        <div id="mapView" style="display: none;">
+            <div id="map" style="height: 600px; width: 100%; border-radius: 88px; margin-bottom: 40px;"></div>
+        </div>
+
+        {% if not needies %}
+        <div class="empty-state">
+            <h3>😔 Пока нет нуждающихся</h3>
+            <p>Загляните позже или станьте волонтером, чтобы помогать</p>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<!-- Модальное окно фильтрации -->
+<div class="modal fade filter-modal" id="filterModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🔍 Фильтр</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="filter-option">
+                    <label>Категория</label>
+                    <select id="filterCategory" class="filter-select">
+                        <option value="all">Все категории</option>
+                        <option value="пожилые">Пожилые люди</option>
+                        <option value="animals">Животные</option>
+                        <option value="children">Дети</option>
+                        <option value="disabled">Люди с ОВЗ</option>
+                        <option value="homeless">Бездомные</option>
+                    </select>
+                </div>
+                <div class="filter-option">
+                    <label>Срочность</label>
+                    <select id="filterUrgency" class="filter-select">
+                        <option value="all">Любая</option>
+                        <option value="1">Высокая</option>
+                        <option value="2">Средняя</option>
+                        <option value="3">Низкая</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 30px;">Отмена</button>
+                <button type="button" class="btn" onclick="applyFilters()" style="background: #FF6F61; border-radius: 30px; color: white;">Применить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map = null;
+    let currentView = 'list';
+
+    function switchView(view) {
+        currentView = view;
+        const listView = document.getElementById('listView');
+        const mapView = document.getElementById('mapView');
+        const filterListBtn = document.querySelector('.filter-list');
+        const filterMapBtn = document.querySelector('.filter-map');
+
+        if (view === 'list') {
+            listView.style.display = 'block';
+            mapView.style.display = 'none';
+            filterListBtn.classList.add('active');
+            filterMapBtn.classList.remove('active');
+        } else if (view === 'map') {
+            listView.style.display = 'none';
+            mapView.style.display = 'block';
+            filterListBtn.classList.remove('active');
+            filterMapBtn.classList.add('active');
+            initMap();
+        }
+    }
+
+    function initMap() {
+        if (map) return;
+        map = L.map('map').setView([51.660598, 39.200585], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        {% for needy in needies %}
+            {% if needy[6] and needy[7] %}
+                const lat{{ loop.index }} = {{ needy[6] }};
+                const lng{{ loop.index }} = {{ needy[7] }};
+            {% else %}
+                const lat{{ loop.index }} = 51.660598;
+                const lng{{ loop.index }} = 39.200585;
+            {% endif %}
+            const marker{{ loop.index }} = L.marker([lat{{ loop.index }}, lng{{ loop.index }}]).addTo(map);
+            marker{{ loop.index }}.bindPopup(`
+                <div style="max-width: 220px;">
+                    <strong>{{ needy[1] }}</strong><br>
+                    {% if needy[3] %}<img src="/{{ needy[3] }}" style="max-width: 100%; border-radius: 12px; margin: 8px 0;">{% endif %}
+                    <p>{{ needy[4][:80] }}...</p>
+                    <a href="{{ url_for('needy_profile', id=needy[0]) }}" style="color: #FF6F61;">Подробнее →</a>
+                </div>
+            `);
+        {% endfor %}
+    }
+
+    function applyFilters() {
+        const category = document.getElementById('filterCategory').value;
+        const urgency = document.getElementById('filterUrgency').value;
+        const cards = document.querySelectorAll('.needy-card');
+
+        cards.forEach(card => {
+            let show = true;
+            const cardCategory = card.getAttribute('data-category');
+            const cardUrgency = card.getAttribute('data-urgency');
+
+            if (category !== 'all' && cardCategory !== category) show = false;
+            if (urgency !== 'all' && cardUrgency !== urgency) show = false;
+
+            card.style.display = show ? 'block' : 'none';
+        });
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('filterModal'));
+        if (modal) modal.hide();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.needy-card');
+        cards.forEach(card => card.style.display = 'block');
+    });
+</script>
 {% endblock %}

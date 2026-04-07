@@ -77,6 +77,7 @@ def init_db():
             is_active INTEGER DEFAULT 1,      -- активен ли профиль
             urgency_level INTEGER DEFAULT 2,   -- 1=высокая, 2=средняя, 3=низкая
             status TEXT DEFAULT 'pending',    -- pending, approved, rejected
+            goal INTEGER,
             FOREIGN KEY(organization_id) REFERENCES users(id),
             FOREIGN KEY(created_by) REFERENCES users(id)
         )''')
@@ -385,7 +386,7 @@ def needies_list():
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
         # Показываем только подтвержденных нуждающихся
-        c.execute('''SELECT id, name, tag, photo, description, address, lat, lng, urgency_level 
+        c.execute('''SELECT id, name, tag, photo, description, address, lat, lng, urgency_level, funds_collected, goal, help_info 
                      FROM needies 
                      WHERE status = "approved" AND is_active = 1 
                      ORDER BY urgency_level ASC, created_at DESC''')
