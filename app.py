@@ -1,4 +1,5 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash, send_from_directory
+import jsonify as jsonify
+from flask import Flask, render_template, redirect, url_for, request, session, flash, send_from_directory, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import sqlite3
@@ -520,18 +521,44 @@ def report(needy_id):
 @app.route('/donate/<int:needy_id>', methods=['POST'])
 def donate(needy_id):
     if 'user_id' not in session:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.form.get('ajax'):
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
         return redirect(url_for('login'))
+
     amount = float(request.form['amount'])
     is_subscription = int(request.form.get('subscription', 0))
+
     with sqlite3.connect(DB_NAME) as conn:
-        conn.execute('''INSERT INTO donations (user_id, needy_id, amount, is_subscription, created_at)
-                        VALUES (?, ?, ?, ?, ?)''',
-                     (session['user_id'], needy_id, amount, is_subscription, datetime.now().isoformat()))
-        conn.execute('''UPDATE needies SET funds_collected = funds_collected + ? WHERE id = ?''', (amount, needy_id))
+        c = conn.cursor()
+        # Записываем пожертвование
+        c.execute('''INSERT INTO donations (user_id, needy_id, amount, is_subscription, created_at)
+                     VALUES (?, ?, ?, ?, ?)''',
+                  (session['user_id'], needy_id, amount, is_subscription, datetime.now().isoformat()))
+
+        # Обновляем сумму сбора
+        c.execute('''UPDATE needies SET funds_collected = funds_collected + ? WHERE id = ?''', (amount, needy_id))
+
+        # Получаем обновленные данные
+        c.execute('SELECT funds_collected, goal FROM needies WHERE id = ?', (needy_id,))
+        needy_data = c.fetchone()
+
+        # Получаем количество уникальных помощников (уникальные user_id в donations)
+        c.execute('SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = ?', (needy_id,))
+        helpers_count = c.fetchone()[0] or 0
+
         conn.commit()
+
+        # Для AJAX запроса возвращаем JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.form.get('ajax'):
+            return jsonify({
+                'success': True,
+                'funds_collected': needy_data[0],
+                'goal': needy_data[1],
+                'helpers_count': helpers_count
+            })
+
     flash('Спасибо за помощь!')
     return redirect(url_for('needy_profile', id=needy_id))
-
 
 #административные маршруты
 

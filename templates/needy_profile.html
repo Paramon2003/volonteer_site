@@ -1,31 +1,889 @@
 {% extends "layout.html" %}
 {% block title %}Профиль нуждающегося{% endblock %}
 {% block content %}
-<h2 class="mt-4">Профиль нуждающегося</h2>
-<div class="row">
-    <div class="col-md-4">
-        {% if needy[3] %}
-            <img src="/{{ needy[3] }}" class="img-thumbnail" alt="Фото">
-        {% endif %}
-    </div>
-    <div class="col-md-8">
-        <h3>{{ needy[1] }}</h3>
-        <p><strong>Категория:</strong> {{ needy[2] }}</p>
-        <p><strong>Описание:</strong> {{ needy[4] }}</p>
-        <p><strong>Адрес:</strong> {{ needy[5] }}</p>
-        <p><strong>Собрано средств:</strong> {{ needy[6] }} ₽</p>
-        <p><strong>На что пойдёт помощь:</strong> {{ needy[7] }}</p>
-        <form method="POST" action="/donate/{{ needy[0] }}">
-            <div class="mb-2">
-                <input type="number" step="0.01" name="amount" placeholder="Сумма" class="form-control" required>
+<style>
+
+
+    /* Убираем внутреннюю прокрутку */
+    body {
+        overflow-x: hidden;
+    }
+
+    /* Фоновое изображение */
+    .needy-profile-page::before {
+        content: '';
+        position: absolute;
+        width: 1536px;
+        height: 1024px;
+        left: -48px;
+        top: 0;
+        background: url('{{ url_for("static", filename="hero-bg.png") }}') center/cover no-repeat;
+        opacity: 0.08;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Контейнер с относительным позиционированием */
+    .profile-container {
+        position: relative;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 40px;
+        z-index: 1;
+    }
+
+    /* Заголовок "профиль нуждающегося" */
+    .profile-title-block {
+        position: absolute;
+        width: 429px;
+        height: 68px;
+        left: 79px;
+        top: 99px;
+        background: #5D4037;
+        border-radius: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile-title-block span {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 32px;
+        line-height: 39px;
+        color: #FFFFFF;
+    }
+
+    /* Фото (круглое, большое) */
+    .needy-photo {
+        position: absolute;
+        width: 447px;
+        height: 447px;
+        left: 61px;
+        top: 183px;
+        border-radius: 89px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        background: #f0f0f0;
+    }
+
+    .needy-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Основной информационный блок (розовый) */
+    .info-main-block {
+        position: absolute;
+        width: 838px;
+        height: auto;
+        min-height: 853px;
+        left: 535px;
+        top: 99px;
+        background: #FFA59D;
+        border-radius: 88px;
+        padding: 45px 40px 40px 40px;
+        box-sizing: border-box;
+    }
+
+    /* Верхняя строка: имя + тег (поменяли местами) */
+    .name-and-tag {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    /* Имя нуждающегося (теперь слева) */
+    .needy-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 700;
+        font-size: 36px;
+        line-height: 45px;
+        color: #000000;
+    }
+
+    /* Бейдж категории (теперь справа) */
+    .category-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        background: #FF6F61;
+        border-radius: 17px;
+        padding: 8px 20px 8px 15px;
+        width: fit-content;
+    }
+
+    .category-dot {
+        width: 30px;
+        height: 28px;
+        background: #D9D9D9;
+        border-radius: 50%;
+    }
+
+    .category-text {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 24px;
+        color: #FFFFFF;
+    }
+
+    /* Блок сбора средств */
+    .fundraising-block {
+        background: #C4A095;
+        border-radius: 28.5px;
+        padding: 22px 20px 20px 20px;
+        margin: 20px 0;
+    }
+
+    .fundraising-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 24px;
+        color: #474747;
+        margin-bottom: 10px;
+    }
+
+    .progress-container {
+        margin-bottom: 15px;
+    }
+
+    .progress-bg {
+        background: #A07F74;
+        border-radius: 4px;
+        height: 12px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        background: #FF6F61;
+        border-radius: 4px;
+        height: 12px;
+        width: 0%;
+        transition: width 0.6s ease;
+    }
+
+    .funds-stats {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 24px;
+        color: #000000;
+    }
+
+    /* Блок "Уже помогают" */
+    .helpers-block {
+        background: #5D4037;
+        border-radius: 31px;
+        padding: 20px 25px;
+        margin: 20px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .helpers-info h4 {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        line-height: 29px;
+        color: #D9D9D9;
+        margin-bottom: 8px;
+    }
+
+    .helpers-count {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 32px;
+        line-height: 39px;
+        color: #FFFFFF;
+    }
+
+    .helpers-avatars {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .avatar-circle {
+        width: 69px;
+        height: 71px;
+        background: #D9D9D9;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        color: #fff;
+    }
+
+    .avatar-circle:nth-child(2) { background: #B2B2B2; }
+    .avatar-circle:nth-child(3) { background: #474747; }
+    .avatar-circle.more {
+        background: #474747;
+        font-size: 20px;
+    }
+
+    .reports-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #C4A095;
+        border-radius: 29px;
+        padding: 10px 25px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+
+    .reports-link:hover {
+        transform: scale(1.02);
+        background: #b18a7e;
+    }
+
+    .reports-link .arrow {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 36px;
+        color: #000000;
+    }
+
+    .reports-link span:not(.arrow) {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        color: #000000;
+    }
+
+    /* Описание */
+    .description-block {
+        margin: 25px 0 30px;
+        text-align: center;
+    }
+
+    .description-text {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 28px;
+        line-height: 34px;
+        color: #000000;
+    }
+
+    /* Кнопка "помочь" */
+    .help-button {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .btn-help {
+        width: 225px;
+        height: 71px;
+        background: #5D4037;
+        border-radius: 35.5px;
+        border: none;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 44px;
+        text-align: center;
+        color: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-help:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    /* ========== МОДАЛЬНОЕ ОКНО ОПЛАТЫ ========== */
+    .payment-modal .modal-content {
+        background: #FFD7D3;
+        border-radius: 80px;
+        border: none;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .payment-modal .modal-header {
+        background: #FF8E83;
+        padding: 30px 20px;
+        border-bottom: none;
+        position: relative;
+        border-radius: 80px 80px 0 0;
+    }
+
+    .payment-modal .modal-header .modal-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 44px;
+        text-align: center;
+        color: #000000;
+        width: 100%;
+    }
+
+    .payment-modal .btn-close {
+        position: absolute;
+        right: 30px;
+        top: 30px;
+        z-index: 10;
+        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        padding: 8px;
+        opacity: 0.8;
+    }
+
+    .payment-modal .btn-close:hover {
+        opacity: 1;
+        background-color: rgba(255, 255, 255, 0.8);
+    }
+
+    .payment-modal .modal-body {
+        padding: 30px 30px 40px;
+    }
+
+    /* Переключатель тип платежа */
+    .payment-type-switch {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 30px;
+        position: relative;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        padding-bottom: 15px;
+    }
+
+    .payment-type {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        line-height: 29px;
+        text-align: center;
+        color: #000000;
+        cursor: pointer;
+        padding-bottom: 10px;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .payment-type.active {
+        color: #FF6F61;
+    }
+
+    .payment-type.active::after {
+        content: '';
+        position: absolute;
+        bottom: -16px;
+        left: 0;
+        width: 100%;
+        height: 7px;
+        background: #FF8E83;
+        border-radius: 3.5px;
+    }
+
+    /* Поле ввода суммы */
+    .amount-input-wrapper {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .amount-input {
+        width: 100%;
+        height: 74px;
+        background: #F5F5F5;
+        border: 3px solid #FFA59D;
+        border-radius: 22px;
+        font-family: 'Gilroy', sans-serif;
+        font-size: 24px;
+        padding: 0 80px 0 100px;
+        outline: none;
+    }
+
+    .amount-label {
+        position: absolute;
+        left: 35px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        color: #B2B2B2;
+        pointer-events: none;
+    }
+
+    .amount-currency {
+        position: absolute;
+        right: 35px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        color: #000000;
+    }
+
+    /* Способы оплаты */
+    .payment-methods-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        line-height: 29px;
+        color: #000000;
+        margin-bottom: 20px;
+    }
+
+    .payment-methods-grid {
+        display: flex;
+        gap: 46px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+    }
+
+    .payment-method-card {
+        width: 164px;
+        height: 136px;
+        background: #FF8E83;
+        border-radius: 47px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+
+    .payment-method-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .payment-method-card.selected {
+        box-shadow: 0 0 0 3px #5D4037;
+    }
+
+    .payment-method-card.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .method-icon {
+        width: 68px;
+        height: 53px;
+        background: #D9D9D9;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .method-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 20px;
+        line-height: 24px;
+        text-align: center;
+        color: #000000;
+    }
+
+    .method-card-plus {
+        background: #FF8E83;
+    }
+
+    .method-card-plus .plus-sign {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 64px;
+        line-height: 78px;
+        color: #000000;
+        margin-bottom: 5px;
+    }
+
+    /* Кнопка подписаться/перевести */
+    .btn-submit-payment {
+        width: 100%;
+        max-width: 430px;
+        height: 64px;
+        background: #5D4037;
+        border-radius: 32px;
+        border: none;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 44px;
+        text-align: center;
+        color: #FFFFFF;
+        cursor: pointer;
+        display: block;
+        margin: 0 auto;
+        transition: all 0.3s;
+    }
+
+    .btn-submit-payment:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 1200px) {
+        .profile-container { padding: 0 20px; }
+        .needy-photo { width: 350px; height: 350px; left: 30px; top: 160px; }
+        .info-main-block { left: 420px; width: calc(100% - 450px); }
+        .profile-title-block { left: 30px; width: 350px; }
+        .description-text { font-size: 22px; line-height: 28px; }
+    }
+
+    @media (max-width: 992px) {
+        .needy-photo {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 20px;
+            left: auto;
+            top: auto;
+        }
+        .info-main-block {
+            position: relative;
+            left: auto;
+            top: auto;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .profile-title-block {
+            position: relative;
+            left: auto;
+            top: auto;
+            margin: 0 auto 30px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .profile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .helpers-block { flex-direction: column; text-align: center; }
+        .reports-link { justify-content: center; }
+        .description-text { font-size: 18px; line-height: 24px; }
+    }
+
+    @media (max-width: 768px) {
+        .payment-methods-grid { justify-content: center; }
+        .btn-help { width: 180px; height: 60px; font-size: 28px; }
+        .needy-name { font-size: 28px; }
+        .name-and-tag { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 576px) {
+        .info-main-block { padding: 25px 20px; }
+        .description-text { font-size: 16px; }
+        .helpers-count { font-size: 24px; }
+        .avatar-circle { width: 50px; height: 50px; font-size: 16px; }
+        .payment-modal .modal-header .modal-title { font-size: 24px; }
+        .btn-submit-payment { font-size: 28px; height: 55px; }
+    }
+
+    /* Анимации */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .needy-photo, .info-main-block, .profile-title-block {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+    .needy-photo { animation-delay: 0.1s; }
+    .profile-title-block { animation-delay: 0.2s; }
+    .info-main-block { animation-delay: 0.3s; }
+</style>
+
+<div class="needy-profile-page">
+    <div class="profile-container">
+        <!-- Заголовок -->
+        <div class="profile-title-block">
+            <span>профиль нуждающегося</span>
+        </div>
+
+        <!-- Фото -->
+        <div class="needy-photo">
+            {% if needy[3] %}
+                <img src="/{{ needy[3] }}" alt="{{ needy[1] }}">
+            {% else %}
+                <img src="https://via.placeholder.com/447x447?text=Фото" alt="Нет фото">
+            {% endif %}
+        </div>
+
+        <!-- Основной информационный блок -->
+        <div class="info-main-block">
+            <!-- Имя и тег (поменяли местами) -->
+            <div class="name-and-tag">
+                <div class="needy-name">{{ needy[1] }}</div>
+                <div class="category-badge">
+                    <div class="category-dot"></div>
+                    <div class="category-text">
+                        {% if needy[2] == 'пожилые' %}Пожилые люди
+                        {% elif needy[2] == 'animals' %}Животные
+                        {% elif needy[2] == 'children' %}Дети
+                        {% elif needy[2] == 'disabled' %}Люди с ОВЗ
+                        {% elif needy[2] == 'homeless' %}Бездомные
+                        {% else %}{{ needy[2] }}
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="form-check mb-2">
-                <input type="checkbox" name="subscription" value="1" class="form-check-input">
-                <label class="form-check-label">Оформить подписку</label>
+
+            <!-- Блок сбора средств -->
+            <div class="fundraising-block">
+                <div class="fundraising-title">{{ needy[11] or 'Продуктовая корзина' }}</div>
+                <div class="progress-container">
+                    <div class="progress-bg">
+                        <div class="progress-fill" id="progressFill" style="width: {{ ((needy[6] or 0) / (needy[16] or 1) * 100) if needy[16] else 0 }}%;"></div>
+                    </div>
+                </div>
+                <div class="funds-stats">
+                    <span>{{ "%.0f"|format(needy[6] or 0) }} ₽</span>
+                    <span>из {{ "%.0f"|format(needy[16] or 0) }} ₽</span>
+                </div>
             </div>
-            <button type="submit" class="btn btn-success">Помочь</button>
-        </form>
-        <a href="/report/{{ needy[0] }}" class="btn btn-outline-primary mt-3">Я помог(ла) — оставить отчёт</a>
+
+            <!-- Блок "Уже помогают" -->
+            <div class="helpers-block">
+                <div class="helpers-info">
+                    <h4>Уже помогают</h4>
+                    <div class="helpers-count" id="helpersCount">{{ needy.helpers_count or 0 }} человек</div>
+                </div>
+                <div class="helpers-avatars" id="helpersAvatars">
+                    <div class="avatar-circle">👤</div>
+                    <div class="avatar-circle">👤</div>
+                    <div class="avatar-circle">👤</div>
+                    <div class="avatar-circle more">+{{ (needy.helpers_count or 0) - 3 if (needy.helpers_count or 0) > 3 else 0 }}</div>
+                </div>
+                <div class="reports-link" onclick="scrollToReports()">
+                    <span>Отчеты</span>
+                    <span class="arrow">→</span>
+                </div>
+            </div>
+
+            <!-- Описание -->
+            <div class="description-block">
+                <div class="description-text">
+                    {{ needy[4] or 'Описание отсутствует' }}
+                </div>
+            </div>
+
+            <!-- Кнопка помочь -->
+            <div class="help-button">
+                <button class="btn-help" onclick="openPaymentModal()">помочь</button>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- МОДАЛЬНОЕ ОКНО ОПЛАТЫ -->
+<div class="modal fade payment-modal" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 708px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ needy[11] or 'Продуктовая корзина' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Переключатель типа платежа -->
+                <div class="payment-type-switch">
+                    <div class="payment-type" data-type="subscription" onclick="setPaymentType('subscription')">Подписка</div>
+                    <div class="payment-type active" data-type="one-time" onclick="setPaymentType('one-time')">Разовый перевод</div>
+                </div>
+
+                <!-- Поле ввода суммы -->
+                <div class="amount-input-wrapper">
+                    <input type="number" id="paymentAmount" class="amount-input" value="500" step="100" min="50">
+                    <span class="amount-label">сумма</span>
+                    <span class="amount-currency" id="amountCurrency">₽/мес</span>
+                </div>
+
+                <!-- Способы оплаты -->
+                <div class="payment-methods-title">Способы оплаты</div>
+                <div class="payment-methods-grid">
+                    <div class="payment-method-card" data-method="card" onclick="selectPaymentMethod('card')">
+                        <div class="method-icon">💳</div>
+                        <div class="method-name">карта</div>
+                    </div>
+                    <div class="payment-method-card" id="sbpMethod" data-method="sbp" onclick="selectPaymentMethod('sbp')">
+                        <div class="method-icon">📱</div>
+                        <div class="method-name">СБП</div>
+                    </div>
+                    <div class="payment-method-card method-card-plus" data-method="new" onclick="selectPaymentMethod('new')">
+                        <div class="plus-sign">+</div>
+                        <div class="method-name">новая карта</div>
+                    </div>
+                </div>
+
+                <!-- Кнопка действия -->
+                <button class="btn-submit-payment" id="submitPaymentBtn" onclick="submitDonation()">перевести</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPaymentType = 'one-time';
+    let selectedPaymentMethod = 'card';
+
+    function setPaymentType(type) {
+        currentPaymentType = type;
+        const subscriptionBtn = document.querySelector('.payment-type[data-type="subscription"]');
+        const oneTimeBtn = document.querySelector('.payment-type[data-type="one-time"]');
+        const currencySpan = document.getElementById('amountCurrency');
+        const sbpMethod = document.getElementById('sbpMethod');
+
+        if (type === 'subscription') {
+            subscriptionBtn.classList.add('active');
+            oneTimeBtn.classList.remove('active');
+            currencySpan.textContent = '₽/мес';
+            // СБП недоступна при подписке - блокируем
+            sbpMethod.classList.add('disabled');
+            // Если был выбран СБП, переключаем на карту
+            if (selectedPaymentMethod === 'sbp') {
+                selectPaymentMethod('card');
+            }
+        } else {
+            subscriptionBtn.classList.remove('active');
+            oneTimeBtn.classList.add('active');
+            currencySpan.textContent = '₽';
+            // СБП доступна при разовом платеже
+            sbpMethod.classList.remove('disabled');
+        }
+
+        // Обновляем текст кнопки
+        const submitBtn = document.getElementById('submitPaymentBtn');
+        if (type === 'subscription') {
+            submitBtn.textContent = 'подписаться';
+        } else {
+            submitBtn.textContent = 'перевести';
+        }
+    }
+
+    function selectPaymentMethod(method) {
+        // Проверяем, не заблокирован ли метод СБП
+        if (method === 'sbp') {
+            const sbpMethod = document.getElementById('sbpMethod');
+            if (sbpMethod.classList.contains('disabled')) {
+                return;
+            }
+        }
+
+        selectedPaymentMethod = method;
+        // Визуальное выделение
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        document.querySelector(`.payment-method-card[data-method="${method}"]`).classList.add('selected');
+    }
+
+    function openPaymentModal() {
+        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        modal.show();
+    }
+
+    function submitDonation() {
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        if (!amount || amount < 50) {
+            alert('Пожалуйста, введите сумму от 50 ₽');
+            return;
+        }
+
+        const isSubscription = (currentPaymentType === 'subscription') ? 1 : 0;
+
+        // Отправка AJAX запроса для пожертвования
+        fetch(`/donate/{{ needy[0] }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `amount=${amount}&subscription=${isSubscription}&ajax=1`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Закрываем модалку
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                // Обновляем данные на странице
+                updateDonationUI(data);
+                // Показываем уведомление
+                showNotification('Спасибо за помощь! ❤️', 'success');
+            } else {
+                showNotification('Ошибка при обработке платежа', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Произошла ошибка', 'error');
+        });
+    }
+
+    function updateDonationUI(data) {
+        // Обновляем сумму собранных средств
+        const fundsCollectedElem = document.querySelector('.funds-stats span:first-child');
+        if (fundsCollectedElem) {
+            fundsCollectedElem.textContent = Math.round(data.funds_collected) + ' ₽';
+        }
+        // Обновляем прогресс-бар
+        const progressPercent = (data.funds_collected / data.goal) * 100;
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) {
+            progressFill.style.width = Math.min(progressPercent, 100) + '%';
+        }
+        // Обновляем количество помощников
+        const helpersCountElem = document.getElementById('helpersCount');
+        if (helpersCountElem && data.helpers_count) {
+            helpersCountElem.textContent = data.helpers_count + ' человек';
+        }
+    }
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-custom`;
+        notification.style.position = 'fixed';
+        notification.style.top = '100px';
+        notification.style.left = '50%';
+        notification.style.transform = 'translateX(-50%)';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.style.textAlign = 'center';
+        notification.style.borderRadius = '16px';
+        notification.style.padding = '12px 24px';
+        notification.innerHTML = message + '<button type="button" class="btn-close" style="float: right;" onclick="this.parentElement.remove()"></button>';
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    function scrollToReports() {
+        showNotification('Скоро здесь будут отчеты о помощи!', 'info');
+    }
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        selectPaymentMethod('card');
+        setPaymentType('one-time');
+    });
+</script>
 {% endblock %}
