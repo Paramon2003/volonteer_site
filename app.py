@@ -1,4 +1,7 @@
 import jsonify as jsonify
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import calendar
 from flask import Flask, render_template, redirect, url_for, request, session, flash, send_from_directory, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -13,6 +16,13 @@ UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DB_NAME = 'volunteer.db'
 
+COLLECTION_TYPES = {
+    'product_basket': 'Продуктовая корзина',
+    'medicine': 'Лекарства',
+    'treatment': 'Лечение',
+    'equipment': 'Оборудование',
+    'one_time': 'Разовый сбор',
+}
 
 def geocode_address(address, city="Воронеж"):
     base_url = "https://nominatim.openstreetmap.org/search"
@@ -156,10 +166,125 @@ def init_db():
                       ('Администратор', 'admin@example.com',
                        generate_password_hash('admin123'), 'admin', 1,
                        datetime.now().isoformat()))
+        c.execute("PRAGMA table_info(needies)")
+        columns = [col[1] for col in c.fetchall()]
 
+        if 'collection_status' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN collection_status TEXT DEFAULT "active"')
+        if 'completed_date' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN completed_date TEXT')
+        if 'last_reset_date' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN last_reset_date TEXT')
+        if 'reset_day' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN reset_day INTEGER DEFAULT 1')
+
+        # Таблица для достижений
+        c.execute('''CREATE TABLE IF NOT EXISTS badges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                badge_name TEXT,
+                badge_icon TEXT,
+                earned_date TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
+
+        # Таблица для уведомлений
+        c.execute('''CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                type TEXT,
+                title TEXT,
+                message TEXT,
+                link TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
         conn.commit()
 
 
+def check_and_update_collection_status(needy_id):
+    """Проверяет статус сбора и обновляет его при необходимости"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT id, help_info, goal, funds_collected, collection_status, 
+                            last_reset_date, reset_day
+                     FROM needies WHERE id = ?''', (needy_id,))
+        needy = c.fetchone()
+
+        if not needy:
+            return
+
+        help_info = needy[1]
+        goal = needy[2]
+        collected = needy[3]
+        status = needy[4]
+        last_reset = needy[5]
+        reset_day = needy[6]
+
+        # Проверяем, нужно ли сбросить сбор для продуктовой корзины
+        if 'продуктовая' in help_info.lower() or 'корзина' in help_info.lower():
+            now = datetime.now()
+
+            # Если сбор завершен и наступил новый месяц
+            if status == 'completed':
+                if last_reset:
+                    last_reset_date = datetime.fromisoformat(last_reset)
+                    if now.month != last_reset_date.month or now.year != last_reset_date.year:
+                        # Сбрасываем сбор на новый месяц
+                        c.execute('''UPDATE needies 
+                                     SET funds_collected = 0, 
+                                         collection_status = 'active',
+                                         last_reset_date = ?
+                                     WHERE id = ?''',
+                                  (now.isoformat(), needy_id))
+                        conn.commit()
+                        return
+            elif status == 'active' and collected >= goal:
+                # Достигнута цель - завершаем сбор до следующего месяца
+                c.execute('''UPDATE needies 
+                             SET collection_status = 'completed',
+                                 completed_date = ?
+                             WHERE id = ?''',
+                          (now.isoformat(), needy_id))
+                conn.commit()
+
+        # Для разовых сборов - просто завершаем
+        elif 'разовый' in help_info.lower():
+            if collected >= goal and status == 'active':
+                c.execute('''UPDATE needies 
+                             SET collection_status = 'completed',
+                                 completed_date = ?
+                             WHERE id = ?''',
+                          (datetime.now().isoformat(), needy_id))
+                conn.commit()
+
+
+def check_and_award_badges(user_id):
+    """Проверяет и выдает достижения пользователю"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Получаем статистику пользователя
+        c.execute('''SELECT COUNT(DISTINCT needy_id) as helped_needies,
+                            SUM(amount) as total_donated,
+                            COUNT(*) as donations_count
+                     FROM donations 
+                     WHERE user_id = ?''', (user_id,))
+        stats = c.fetchone()
+
+        badges_earned = []
+
+        if stats[0] >= 1:
+            badges_earned.append('🥇 Первая помощь')
+        if stats[0] >= 5:
+            badges_earned.append('🌟 Щедрое сердце')
+        if stats[1] and stats[1] >= 10000:
+            badges_earned.append('💰 Крупный благотворитель')
+        if stats[2] >= 10:
+            badges_earned.append('🔥 Постоянный помощник')
+
+        return badges_earned
 
 
 @app.route('/choose-role')
@@ -422,10 +547,21 @@ def needies_list():
 def needy_profile(id):
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
-        c.execute('SELECT * FROM needies WHERE id = ?', (id,))
-        needy = c.fetchone()
-    return render_template('needy_profile.html', needy=needy)
 
+        # Явно указываем нужные колонки вместо SELECT *
+        c.execute('''SELECT n.id, n.name, n.tag, n.photo, n.description, n.address, 
+                            n.funds_collected, n.lat, n.lng, n.help_info, n.goal, 
+                            n.urgency_level, n.status, n.created_at, n.organization_id,
+                            (SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = n.id) as helpers_count
+                     FROM needies n 
+                     WHERE n.id = ?''', (id,))
+        needy = c.fetchone()
+
+        if not needy:
+            flash('Нуждающийся не найден')
+            return redirect(url_for('needies_list'))
+
+    return render_template('needy_profile.html', needy=needy)
 
 # добавление нуждающегося
 @app.route('/add_needy', methods=['GET', 'POST'])
@@ -452,8 +588,9 @@ def add_needy():
             tag = request.form['tag']
             description = request.form['description']
             address = request.form['address']
-            help_info = request.form['help_info']
-            urgency_level = int(request.form['urgency_level'])
+            help_info = request.form.get('help_info', '')
+            urgency_level = int(request.form.get('urgency_level', 2))
+            goal = float(request.form.get('goal', 0))  # ДОБАВИТЬ ЭТУ СТРОКУ
 
             photo = None
             if 'photo' in request.files:
@@ -469,20 +606,20 @@ def add_needy():
             # Для организаций - сразу активный, для админов - тоже
             status = 'approved'  # Сразу одобрено, так как добавляет верифицированная организация или админ
 
+            # ИСПРАВЛЕННЫЙ INSERT с полем goal
             c.execute('''INSERT INTO needies (name, tag, photo, description, address, lat, lng, 
                                              help_info, organization_id, created_by, created_at, 
-                                             urgency_level, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                             urgency_level, status, goal)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                       (name, tag, photo, description, address, lat, lng, help_info,
                        session['user_id'], session['user_id'], datetime.now().isoformat(),
-                       urgency_level, status))
+                       urgency_level, status, goal))
             conn.commit()
 
             flash('Нуждающийся успешно добавлен!')
             return redirect(url_for('needies_list'))
 
     return render_template('add_needy.html', user_role=user[0], is_verified=user[1])
-
 
 # --- Задания ---
 @app.route('/tasks')
@@ -530,35 +667,82 @@ def donate(needy_id):
 
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
+
+        # Проверяем статус сбора
+        c.execute('''SELECT collection_status, goal, funds_collected, help_info 
+                     FROM needies WHERE id = ?''', (needy_id,))
+        needy = c.fetchone()
+
+        if not needy:
+            return jsonify({'success': False, 'error': 'Нуждающийся не найден'})
+
+        # Если сбор завершен - проверяем возможность возобновления
+        if needy[0] == 'completed':
+            help_info = needy[3]
+            if 'продуктовая' in help_info.lower() or 'корзина' in help_info.lower():
+                # Проверяем, не начался ли новый месяц
+                check_and_update_collection_status(needy_id)
+                # Получаем обновленный статус
+                c.execute('SELECT collection_status FROM needies WHERE id = ?', (needy_id,))
+                new_status = c.fetchone()[0]
+                if new_status == 'completed':
+                    return jsonify({
+                        'success': False,
+                        'error': 'Сбор средств завершен. Новый сбор начнется с 1 числа следующего месяца.'
+                    })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Сбор средств завершен. Спасибо за помощь!'
+                })
+
         # Записываем пожертвование
         c.execute('''INSERT INTO donations (user_id, needy_id, amount, is_subscription, created_at)
                      VALUES (?, ?, ?, ?, ?)''',
                   (session['user_id'], needy_id, amount, is_subscription, datetime.now().isoformat()))
 
         # Обновляем сумму сбора
-        c.execute('''UPDATE needies SET funds_collected = funds_collected + ? WHERE id = ?''', (amount, needy_id))
+        c.execute('''UPDATE needies SET funds_collected = funds_collected + ? WHERE id = ?''',
+                  (amount, needy_id))
 
-        # Получаем обновленные данные
+        # Проверяем, не достигнута ли цель
         c.execute('SELECT funds_collected, goal FROM needies WHERE id = ?', (needy_id,))
-        needy_data = c.fetchone()
+        updated_needy = c.fetchone()
 
-        # Получаем количество уникальных помощников (уникальные user_id в donations)
+        if updated_needy[0] >= updated_needy[1]:
+            # Отмечаем сбор как завершенный
+            c.execute('''UPDATE needies 
+                         SET collection_status = 'completed',
+                             completed_date = ?
+                         WHERE id = ?''',
+                      (datetime.now().isoformat(), needy_id))
+
+        # Получаем количество уникальных помощников
         c.execute('SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = ?', (needy_id,))
         helpers_count = c.fetchone()[0] or 0
 
+        # Начисляем рейтинг волонтеру
+        c.execute('''UPDATE users SET rating = rating + 0.1 
+                     WHERE id = ? AND role = 'volunteer' ''', (session['user_id'],))
+
         conn.commit()
 
-        # Для AJAX запроса возвращаем JSON
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.form.get('ajax'):
-            return jsonify({
-                'success': True,
-                'funds_collected': needy_data[0],
-                'goal': needy_data[1],
-                'helpers_count': helpers_count
-            })
+        # Получаем финальные данные
+        c.execute('''SELECT funds_collected, goal, collection_status, 
+                            (SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = ?) as helpers
+                     FROM needies WHERE id = ?''', (needy_id, needy_id))
+        final_data = c.fetchone()
 
-    flash('Спасибо за помощь!')
-    return redirect(url_for('needy_profile', id=needy_id))
+        return jsonify({
+            'success': True,
+            'funds_collected': final_data[0],
+            'goal': final_data[1],
+            'helpers_count': final_data[3],
+            'status': final_data[2],
+            'message': 'Спасибо за помощь! ❤️',
+            'badge_earned': check_and_award_badges(session['user_id'])
+        })
+
 
 #административные маршруты
 
@@ -908,6 +1092,36 @@ def update_profile():
         flash('Профиль успешно обновлен!', 'success')
 
     return redirect(url_for('dashboard'))
+
+
+@app.route('/cron/reset-collections')
+def reset_collections():
+    """Эндпоинт для cron-задачи (вызывать 1 числа каждого месяца)"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Находим все завершенные сборы с продуктовыми корзинами
+        c.execute('''SELECT id FROM needies 
+                     WHERE collection_status = 'completed' 
+                     AND (help_info LIKE '%продуктовая%' OR help_info LIKE '%корзина%')''')
+
+        reset_count = 0
+        for (needy_id,) in c.fetchall():
+            c.execute('''UPDATE needies 
+                         SET funds_collected = 0,
+                             collection_status = 'active',
+                             last_reset_date = ?
+                         WHERE id = ?''',
+                      (datetime.now().isoformat(), needy_id))
+            reset_count += 1
+
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'reset_count': reset_count,
+            'message': f'Сброшено {reset_count} сборов'
+        })
 
 # --- Запуск ---
 if __name__ == '__main__':

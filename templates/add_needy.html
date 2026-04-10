@@ -1,64 +1,575 @@
 {% extends "layout.html" %}
-{% block title %}Добавить нуждающегося{% endblock %}
+{% block title %}Добавить подопечного{% endblock %}
 {% block content %}
-<h2 class="mt-4">Добавить нуждающегося</h2>
+<style>
+    /* Фоновое изображение как на других страницах */
+    .add-needy-page::before {
+        content: '';
+        position: absolute;
+        width: 1536px;
+        height: 1024px;
+        left: -48px;
+        top: 0;
+        background: url('{{ url_for("static", filename="hero-bg.png") }}') center/cover no-repeat;
+        opacity: 0.05;
+        pointer-events: none;
+        z-index: 0;
+    }
 
-{% if user_role == 'organization' and not is_verified %}
-<div class="alert alert-warning">
-    <strong>Внимание!</strong> Ваша организация еще не подтверждена администратором.
-    После подтверждения вы сможете добавлять нуждающихся.
+    .add-container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 40px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Заголовок страницы в стиле плашки */
+    .page-title-block {
+        background: #5D4037;
+        border-radius: 34px;
+        padding: 15px 40px;
+        display: inline-block;
+        margin-bottom: 40px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        animation: slideDown 0.5s ease;
+    }
+
+    .page-title-block span {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 1.2;
+        color: #FFFFFF;
+    }
+
+    /* Двухколоночный макет */
+    .add-grid {
+        display: flex;
+        gap: 40px;
+        flex-wrap: wrap;
+    }
+
+    /* Левая колонка - Превью карточки (UI фишка) */
+    .preview-column {
+        flex: 1;
+        min-width: 380px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: fadeInLeft 0.6s ease;
+    }
+
+    .preview-title {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 24px;
+        color: #000;
+        margin-bottom: 20px;
+        align-self: flex-start;
+        padding-left: 20px;
+    }
+
+    /* Точная копия карточки из needies_list, но с динамическим обновлением */
+    .preview-card {
+        width: 100%;
+        max-width: 403px;
+        background: #FFA59D;
+        border-radius: 88px;
+        padding: 0 0 30px 0;
+        box-shadow: 0 25px 45px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease;
+        position: sticky;
+        top: 100px;
+    }
+
+    .preview-photo {
+        width: 224px;
+        height: 224px;
+        margin: 44px auto 0;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .preview-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .preview-photo .placeholder-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        background: #D9D9D9;
+        color: #666;
+        font-size: 48px;
+    }
+
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 20px 0 20px;
+        gap: 10px;
+    }
+
+    .card-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #FF6F61;
+        border-radius: 17px;
+        padding: 6px 16px 6px 12px;
+    }
+
+    .tag-dot { width: 23px; height: 23px; background: #D9D9D9; border-radius: 50%; }
+    .tag-text { font-family: 'Gilroy', sans-serif; font-weight: 400; font-size: 16px; color: #FFFFFF; }
+
+    .collected-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #FF6F61;
+        border-radius: 12px;
+        padding: 6px 12px;
+        font-family: 'Gilroy', sans-serif;
+        font-size: 14px;
+        color: #FFFFFF;
+    }
+
+    .badge-dot { width: 19px; height: 19px; background: #FF3030; border-radius: 50%; }
+
+    .card-name {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 32px;
+        color: #000000;
+        text-align: center;
+        margin: 20px 20px 10px;
+        min-height: 78px;
+        word-break: break-word;
+    }
+
+    .card-description {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 24px;
+        color: #000000;
+        padding: 0 18px;
+        margin-bottom: 20px;
+        min-height: 72px;
+    }
+
+    .card-button {
+        display: block;
+        width: 252px;
+        margin: 20px auto 0;
+        background: #5D4037;
+        border-radius: 34px;
+        padding: 12px 0;
+        text-align: center;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        font-size: 32px;
+        color: #FFFFFF;
+        border: none;
+        pointer-events: none; /* Это же превью */
+    }
+
+    /* Правая колонка - Форма */
+    .form-column {
+        flex: 1.2;
+        min-width: 500px;
+        animation: fadeInRight 0.6s ease;
+    }
+
+    .form-card {
+        background: #FFA59D;
+        border-radius: 88px;
+        padding: 40px 45px;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        color: #000000;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .form-control, .form-select {
+        width: 100%;
+        background: #FFFFFF;
+        border: 3px solid transparent;
+        border-radius: 26px;
+        padding: 15px 25px;
+        font-family: 'Gilroy', sans-serif;
+        font-size: 16px;
+        color: #000;
+        outline: none;
+        transition: all 0.3s;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #5D4037;
+        box-shadow: 0 8px 20px rgba(93, 64, 55, 0.15);
+    }
+
+    /* Стильный Drag-and-Drop / выбор фото */
+    .photo-upload-area {
+        background: #FFF6F0;
+        border: 2px dashed #A07F74;
+        border-radius: 46px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .photo-upload-area:hover {
+        background: #FFE4E1;
+        border-color: #FF6F61;
+    }
+
+    .photo-upload-area i {
+        font-size: 40px;
+        color: #A07F74;
+        margin-bottom: 10px;
+    }
+
+    .upload-text {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 18px;
+        color: #5D4037;
+    }
+
+    .upload-subtext {
+        font-family: 'Gilroy', sans-serif;
+        font-size: 14px;
+        color: #888;
+    }
+
+    #photoInput {
+        display: none;
+    }
+
+    .photo-name {
+        margin-top: 10px;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 500;
+        color: #5D4037;
+        background: #FFD7D3;
+        padding: 5px 15px;
+        border-radius: 30px;
+        display: inline-block;
+    }
+
+    /* Кнопка создания */
+    .submit-btn {
+        width: 100%;
+        background: #5D4037;
+        border-radius: 46px;
+        padding: 18px;
+        border: none;
+        font-family: 'Gilroy', sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        color: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 20px;
+        box-shadow: 0 10px 20px rgba(93, 64, 55, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .submit-btn:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+    }
+
+    .submit-btn img {
+        width: 28px;
+        height: 28px;
+        filter: brightness(0) invert(1);
+    }
+
+    /* Анимации */
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInLeft {
+        from { opacity: 0; transform: translateX(-30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeInRight {
+        from { opacity: 0; transform: translateX(30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Адаптив */
+    @media (max-width: 992px) {
+        .preview-column { align-items: center; }
+        .preview-title { align-self: center; }
+        .form-column { min-width: 100%; }
+        .add-container { padding: 20px; }
+    }
+
+    @media (max-width: 576px) {
+        .form-card { padding: 25px 20px; border-radius: 48px; }
+        .page-title-block span { font-size: 28px; }
+        .preview-card { max-width: 320px; }
+        .card-name { font-size: 24px; }
+        .card-button { width: 200px; font-size: 24px; }
+    }
+</style>
+
+<div class="add-needy-page">
+    <div class="add-container">
+        <div class="page-title-block">
+            <span>➕ Новый подопечный</span>
+        </div>
+
+        <div class="add-grid">
+            <!-- ЛЕВАЯ КОЛОНКА: LIVE PREVIEW -->
+            <div class="preview-column">
+                <div class="preview-title">👀 Так увидят ваш профиль:</div>
+                <div class="preview-card" id="previewCard">
+                    <div class="preview-photo" id="previewPhoto">
+                        <div class="placeholder-icon">📸</div>
+                        <img id="previewImg" src="#" alt="Preview" style="display: none;">
+                    </div>
+                    <div class="card-header-row">
+                        <div class="card-tag">
+                            <span class="tag-dot"></span>
+                            <span class="tag-text" id="previewTag">Категория</span>
+                        </div>
+                        <div class="collected-badge">
+                            <span class="badge-dot"></span>
+                            <span>Новый сбор</span>
+                        </div>
+                    </div>
+                    <div class="card-name" id="previewName">Имя Фамилия</div>
+                    <div class="card-description" id="previewDesc">Здесь будет отображаться описание подопечного...</div>
+                    <div class="card-button">подробнее</div>
+                </div>
+                <div style="margin-top: 15px; color: #666; font-family: Gilroy;">
+                    <img src="{{ url_for('static', filename='Lightning.png') }}" style="width: 20px; vertical-align: middle;">
+                    Данные обновляются автоматически
+                </div>
+            </div>
+
+            <!-- ПРАВАЯ КОЛОНКА: ФОРМА -->
+            <div class="form-column">
+                <form method="POST" enctype="multipart/form-data" class="form-card">
+                    <!-- Имя -->
+                    <div class="form-group">
+                        <label class="form-label">👤 Имя / ФИО нуждающегося</label>
+                        <input type="text" name="name" class="form-control" id="inputName" placeholder="Иванов Иван Иванович" required>
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="form-group">
+                        <label class="form-label">🏷️ Категория</label>
+                        <select name="tag" class="form-select" id="inputTag" required>
+                            <option value="пожилые">Пожилые люди</option>
+                            <option value="animals">Животные</option>
+                            <option value="children">Дети</option>
+                            <option value="disabled">Люди с ОВЗ</option>
+                            <option value="homeless">Бездомные</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+
+                    <!-- Фото (Drag-and-Drop UI) -->
+                    <div class="form-group">
+                        <label class="form-label">🖼️ Фотография</label>
+                        <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+                            <div>🖼️</div>
+                            <div class="upload-text">Нажмите или перетащите фото</div>
+                            <div class="upload-subtext">PNG, JPG (рекомендуется квадратное)</div>
+                        </div>
+                        <input type="file" name="photo" id="photoInput" accept="image/*" style="display: none;">
+                        <div id="photoNameDisplay" class="photo-name"></div>
+                    </div>
+
+                    <!-- Адрес -->
+                    <div class="form-group">
+                        <label class="form-label">📍 Адрес в Воронеже</label>
+                        <input type="text" name="address" class="form-control" id="inputAddress" placeholder="ул. Пушкина, д. 10" required>
+                    </div>
+
+                    <!-- Срочность (Новый UI - кнопки вместо select) -->
+                    <div class="form-group">
+                        <label class="form-label">⚠️ Срочность помощи</label>
+                        <div style="display: flex; gap: 15px;">
+                            <label style="flex: 1; background: #FF6F61; border-radius: 26px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s;" id="urgencyHigh">
+                                <input type="radio" name="urgency_level" value="1" style="display: none;"> 🔴 Высокая
+                            </label>
+                            <label style="flex: 1; background: #C4A095; border-radius: 26px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s;" id="urgencyMedium">
+                                <input type="radio" name="urgency_level" value="2" style="display: none;" checked> 🟡 Средняя
+                            </label>
+                            <label style="flex: 1; background: #A07F74; border-radius: 26px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s;" id="urgencyLow">
+                                <input type="radio" name="urgency_level" value="3" style="display: none;"> 🟢 Низкая
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Цель сбора (финансовая) -->
+                    <div class="form-group">
+                        <label class="form-label">🎯 Цель сбора (₽)</label>
+                        <input type="number" name="goal" class="form-control" id="inputGoal" placeholder="50000" value="0" min="0" step="1000">
+                    </div>
+
+                    <!-- На что пойдет помощь -->
+<div class="form-group">
+    <label class="form-label">📋 Тип сбора</label>
+    <select name="help_info" class="form-select" id="inputHelpType" required>
+        <option value="Продуктовая корзина (ежемесячно)">🥫 Продуктовая корзина (ежемесячно)</option>
+        <option value="Лекарства (разовый сбор)">💊 Лекарства (разовый сбор)</option>
+        <option value="Лечение (разовый сбор)">🏥 Лечение (разовый сбор)</option>
+        <option value="Оборудование (разовый сбор)">🔧 Оборудование (разовый сбор)</option>
+        <option value="Разовый сбор">🎯 Разовый сбор</option>
+        <option value="Ежемесячная помощь">📅 Ежемесячная помощь</option>
+    </select>
 </div>
-{% endif %}
 
-<form method="POST" enctype="multipart/form-data">
-    <div class="mb-3">
-        <label class="form-label">Имя/ФИО нуждающегося</label>
-        <input type="text" name="name" class="form-control" required>
+                    <!-- Описание -->
+                    <div class="form-group">
+                        <label class="form-label">📝 Описание ситуации</label>
+                        <textarea name="description" class="form-control" id="inputDesc" rows="4" placeholder="Расскажите подробнее о том, какая помощь нужна..." required></textarea>
+                    </div>
+
+                    <!-- Скрытое поле, подтверждающее, что добавляет организация -->
+                    <input type="hidden" name="organization_id" value="{{ session['user_id'] }}">
+
+                    <!-- Кнопка отправки -->
+                    <button type="submit" class="submit-btn">
+                        <img src="{{ url_for('static', filename='Heart.png') }}" alt="heart"> Опубликовать подопечного
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
+</div>
 
-    <div class="mb-3">
-        <label class="form-label">Категория</label>
-        <select name="tag" class="form-control" required>
-            <option value="elderly">Пожилые люди</option>
-            <option value="animals">Животные</option>
-            <option value="children">Дети</option>
-            <option value="disabled">Люди с ограниченными возможностями</option>
-            <option value="homeless">Бездомные</option>
-            <option value="other">Другое</option>
-        </select>
-    </div>
+<script>
+    // --- LIVE PREVIEW LOGIC ---
+    const inputName = document.getElementById('inputName');
+    const inputTag = document.getElementById('inputTag');
+    const inputDesc = document.getElementById('inputDesc');
+    const photoInput = document.getElementById('photoInput');
 
-    <div class="mb-3">
-        <label class="form-label">Описание ситуации</label>
-        <textarea name="description" class="form-control" rows="4" required></textarea>
-    </div>
+    const previewName = document.getElementById('previewName');
+    const previewTag = document.getElementById('previewTag');
+    const previewDesc = document.getElementById('previewDesc');
+    const previewImg = document.getElementById('previewImg');
+    const placeholderIcon = document.querySelector('.placeholder-icon');
 
-    <div class="mb-3">
-        <label class="form-label">Адрес</label>
-        <input type="text" name="address" class="form-control" placeholder="ул. Пушкина, д. 10" required>
-    </div>
+    // Обновление текстовых полей
+    inputName.addEventListener('input', (e) => {
+        previewName.textContent = e.target.value || 'Имя Фамилия';
+    });
 
-    <div class="mb-3">
-        <label class="form-label">На что пойдёт помощь</label>
-        <textarea name="help_info" class="form-control" rows="3"
-                  placeholder="Например: необходимы продукты, лекарства, одежда..."></textarea>
-    </div>
+    inputTag.addEventListener('change', (e) => {
+        let tagText = e.target.options[e.target.selectedIndex].text;
+        previewTag.textContent = tagText;
+    });
 
-    <div class="mb-3">
-        <label class="form-label">Срочность</label>
-        <select name="urgency_level" class="form-control">
-            <option value="1">Высокая (требуется срочная помощь)</option>
-            <option value="2" selected>Средняя</option>
-            <option value="3">Низкая</option>
-        </select>
-    </div>
+    inputDesc.addEventListener('input', (e) => {
+        let text = e.target.value;
+        if (text.length > 100) {
+            previewDesc.textContent = text.substring(0, 100) + '...';
+        } else {
+            previewDesc.textContent = text || 'Здесь будет отображаться описание подопечного...';
+        }
+    });
 
-    <div class="mb-3">
-        <label class="form-label">Фото (необязательно)</label>
-        <input type="file" name="photo" class="form-control">
-    </div>
+    // Обновление фото
+    photoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const fileNameDisplay = document.getElementById('photoNameDisplay');
 
-    <button type="submit" class="btn btn-primary">Добавить нуждающегося</button>
-    <a href="/needies" class="btn btn-secondary">Отмена</a>
-</form>
+        if (file) {
+            fileNameDisplay.textContent = `📎 ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImg.src = event.target.result;
+                previewImg.style.display = 'block';
+                placeholderIcon.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            fileNameDisplay.textContent = '';
+            previewImg.style.display = 'none';
+            placeholderIcon.style.display = 'flex';
+        }
+    });
+
+    // Drag and Drop эффект
+    const dropArea = document.querySelector('.photo-upload-area');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    function preventDefaults (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.style.background = '#FFD7D3');
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.style.background = '#FFF6F0');
+    });
+    dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length) {
+            photoInput.files = files;
+            // Trigger change event manually
+            const changeEvent = new Event('change', { bubbles: true });
+            photoInput.dispatchEvent(changeEvent);
+        }
+    });
+
+    // Стилизация радио-кнопок срочности
+    const urgencyLabels = document.querySelectorAll('[id^="urgency"]');
+    urgencyLabels.forEach(label => {
+        label.addEventListener('click', function() {
+            urgencyLabels.forEach(l => l.style.opacity = '0.7');
+            this.style.opacity = '1';
+            this.style.boxShadow = '0 0 0 3px #FFFFFF';
+            this.querySelector('input[type="radio"]').checked = true;
+        });
+    });
+    // Установим активный стиль по умолчанию для средней срочности
+    document.getElementById('urgencyMedium').style.opacity = '1';
+    document.getElementById('urgencyMedium').style.boxShadow = '0 0 0 3px #FFFFFF';
+
+    // Инициализация превью
+    window.addEventListener('DOMContentLoaded', () => {
+        previewName.textContent = inputName.value || 'Имя Фамилия';
+        previewTag.textContent = inputTag.options[inputTag.selectedIndex].text;
+        previewDesc.textContent = inputDesc.value || 'Здесь будет отображаться описание подопечного...';
+    });
+</script>
 {% endblock %}

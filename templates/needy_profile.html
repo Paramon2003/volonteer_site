@@ -653,15 +653,15 @@
 
             <!-- Блок сбора средств -->
             <div class="fundraising-block">
-                <div class="fundraising-title">{{ needy[11] or 'Продуктовая корзина' }}</div>
+                <div class="fundraising-title">{{ needy[9] or 'Продуктовая корзина' }}</div>
                 <div class="progress-container">
                     <div class="progress-bg">
-                        <div class="progress-fill" id="progressFill" style="width: {{ ((needy[6] or 0) / (needy[16] or 1) * 100) if needy[16] else 0 }}%;"></div>
+                        <div class="progress-fill" id="progressFill" style="width: {{ ((needy[6] or 0) / (needy[10] or 1) * 100) if needy[10] else 0 }}%;"></div>
                     </div>
                 </div>
                 <div class="funds-stats">
                     <span>{{ "%.0f"|format(needy[6] or 0) }} ₽</span>
-                    <span>из {{ "%.0f"|format(needy[16] or 0) }} ₽</span>
+                    <span>из {{ "%.0f"|format(needy[10] or 0) }} ₽</span>
                 </div>
             </div>
 
@@ -703,7 +703,7 @@
     <div class="modal-dialog modal-dialog-centered" style="max-width: 708px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ needy[11] or 'Продуктовая корзина' }}</h5>
+                <h5 class="modal-title">{{ needy[9] or 'Продуктовая корзина' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -841,23 +841,38 @@
     }
 
     function updateDonationUI(data) {
-        // Обновляем сумму собранных средств
-        const fundsCollectedElem = document.querySelector('.funds-stats span:first-child');
-        if (fundsCollectedElem) {
-            fundsCollectedElem.textContent = Math.round(data.funds_collected) + ' ₽';
-        }
-        // Обновляем прогресс-бар
-        const progressPercent = (data.funds_collected / data.goal) * 100;
-        const progressFill = document.getElementById('progressFill');
-        if (progressFill) {
-            progressFill.style.width = Math.min(progressPercent, 100) + '%';
-        }
-        // Обновляем количество помощников
-        const helpersCountElem = document.getElementById('helpersCount');
-        if (helpersCountElem && data.helpers_count) {
-            helpersCountElem.textContent = data.helpers_count + ' человек';
-        }
+    // Обновляем сумму
+    const fundsCollectedElem = document.querySelector('.funds-stats span:first-child');
+    if (fundsCollectedElem) {
+        fundsCollectedElem.textContent = Math.round(data.funds_collected) + ' ₽';
     }
+
+    // Обновляем прогресс-бар
+    const progressPercent = (data.funds_collected / data.goal) * 100;
+    const progressFill = document.getElementById('progressFill');
+    if (progressFill) {
+        progressFill.style.width = Math.min(progressPercent, 100) + '%';
+    }
+
+    // Обновляем количество помощников
+    const helpersCountElem = document.getElementById('helpersCount');
+    if (helpersCountElem && data.helpers_count) {
+        helpersCountElem.textContent = data.helpers_count + ' ' +
+            getPeopleWord(data.helpers_count);
+    }
+
+    // Проверяем достижение цели
+    if (data.funds_collected >= data.goal && data.status === 'completed') {
+        showConfetti();
+        showGoalReachedMessage();
+    }
+
+    // Показываем полученные достижения
+    if (data.badge_earned && data.badge_earned.length > 0) {
+        showBadgeNotification(data.badge_earned);
+    }
+}
+
 
     function showNotification(message, type) {
         const notification = document.createElement('div');
@@ -885,5 +900,82 @@
         selectPaymentMethod('card');
         setPaymentType('one-time');
     });
+
+    function showConfetti() {
+    if (typeof confetti === 'function') {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+        setTimeout(() => {
+            confetti({
+                particleCount: 50,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 }
+            });
+            confetti({
+                particleCount: 50,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 }
+            });
+        }, 200);
+    }
+}
+
+    function getPeopleWord(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'человек';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'человека';
+    return 'человек';
+}
+
+// Показ уведомления о достижении цели
+function showGoalReachedMessage() {
+    const message = document.createElement('div');
+    message.className = 'goal-reached-message';
+    message.innerHTML = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background: linear-gradient(135deg, #FF6F61, #FF8E83);
+                    color: white; padding: 30px 50px; border-radius: 60px;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.2); z-index: 10000;
+                    text-align: center; animation: bounceIn 0.5s ease;">
+            <h2 style="font-size: 36px; margin-bottom: 10px;">🎉 Цель достигнута!</h2>
+            <p style="font-size: 20px;">Спасибо за вашу помощь!</p>
+        </div>
+    `;
+    document.body.appendChild(message);
+    setTimeout(() => message.remove(), 4000);
+}
+
+// Показ полученных достижений
+function showBadgeNotification(badges) {
+    badges.forEach((badge, index) => {
+        setTimeout(() => {
+            const notification = document.createElement('div');
+            notification.className = 'badge-notification';
+            notification.innerHTML = `
+                <div style="position: fixed; bottom: 20px; right: 20px;
+                            background: white; padding: 20px; border-radius: 20px;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999;
+                            animation: slideInRight 0.5s ease;
+                            border-left: 5px solid #FF6F61;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 40px;">${badge}</span>
+                        <div>
+                            <h4 style="margin: 0; color: #333;">Новое достижение!</h4>
+                            <p style="margin: 5px 0 0; color: #666;">${badge.split(' ')[1] || badge}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        }, index * 1000);
+    });
+}
 </script>
 {% endblock %}
