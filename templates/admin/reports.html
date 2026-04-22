@@ -1,0 +1,309 @@
+{% extends "layout.html" %}
+{% block title %}Управление отчетами{% endblock %}
+{% block content %}
+<style>
+    .admin-reports {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .page-title {
+        font-size: 36px;
+        margin-bottom: 30px;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tab {
+        padding: 15px 30px;
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.3s;
+        border-bottom: 3px solid transparent;
+    }
+
+    .tab.active {
+        color: #FF6F61;
+        border-bottom-color: #FF6F61;
+    }
+
+    .tab:hover {
+        color: #FF6F61;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .reports-grid {
+        display: grid;
+        gap: 20px;
+    }
+
+    .report-card {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .report-meta {
+        display: flex;
+        gap: 20px;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .report-photos {
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+        flex-wrap: wrap;
+    }
+
+    .report-photo {
+        width: 100px;
+        height: 100px;
+        border-radius: 10px;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .report-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .report-text {
+        margin: 15px 0;
+        line-height: 1.6;
+    }
+
+    .report-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 25px;
+        border-radius: 25px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-approve {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .btn-approve:hover {
+        background: #45a049;
+    }
+
+    .btn-reject {
+        background: #f44336;
+        color: white;
+    }
+
+    .btn-reject:hover {
+        background: #da190b;
+    }
+
+    .btn-view {
+        background: #2196F3;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px;
+        background: #f9f9f9;
+        border-radius: 20px;
+        color: #666;
+    }
+</style>
+
+<div class="admin-reports">
+    <h1 class="page-title">📋 Управление отчетами</h1>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('pending')">
+            На проверке
+            <span class="badge" style="background: #FF9800; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 10px;">
+                {{ pending_reports|length }}
+            </span>
+        </button>
+        <button class="tab" onclick="switchTab('approved')">
+            Одобренные
+            <span class="badge" style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 10px;">
+                {{ approved_reports|length }}
+            </span>
+        </button>
+    </div>
+
+    <!-- На проверке -->
+    <div id="pending" class="tab-content active">
+        {% if pending_reports %}
+        <div class="reports-grid">
+            {% for report in pending_reports %}
+            <div class="report-card">
+                <div class="report-header">
+                    <div>
+                        <strong style="font-size: 18px;">{{ report[7] }}</strong>
+                        <div class="report-meta" style="margin-top: 5px;">
+                            <span>🏢 {{ report[5] }}</span>
+                            <span>📅 {{ report[3][:10] if report[3] else '' }}</span>
+                        </div>
+                    </div>
+                    <span style="background: #FF9800; color: white; padding: 5px 15px; border-radius: 20px;">
+                        Ожидает проверки
+                    </span>
+                </div>
+
+                {% if report[2] %}
+                <div class="report-photos">
+                    {% for photo in report[2].split(',')[:3] %}
+                    <div class="report-photo" onclick="window.open('/{{ photo }}', '_blank')">
+                        <img src="/{{ photo }}" alt="Фото">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="report-text">
+                    {{ report[1][:200] }}{% if report[1]|length > 200 %}...{% endif %}
+                </div>
+
+                <div class="report-actions">
+                    <a href="{{ url_for('needy_reports', needy_id=report[8]) }}" class="btn btn-view">
+                        👁️ Просмотреть
+                    </a>
+                    <button class="btn btn-approve" onclick="approveReport({{ report[0] }})">
+                        ✅ Одобрить
+                    </button>
+                    <button class="btn btn-reject" onclick="rejectReport({{ report[0] }})">
+                        ❌ Отклонить
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+            <h3>Нет отчетов на проверке</h3>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Одобренные -->
+    <div id="approved" class="tab-content">
+        {% if approved_reports %}
+        <div class="reports-grid">
+            {% for report in approved_reports %}
+            <div class="report-card">
+                <div class="report-header">
+                    <div>
+                        <strong style="font-size: 18px;">{{ report[7] }}</strong>
+                        <div class="report-meta" style="margin-top: 5px;">
+                            <span>🏢 {{ report[5] }}</span>
+                            <span>📅 {{ report[3][:10] if report[3] else '' }}</span>
+                        </div>
+                    </div>
+                    <span style="background: #4CAF50; color: white; padding: 5px 15px; border-radius: 20px;">
+                        ✅ Одобрен
+                    </span>
+                </div>
+
+                <div class="report-actions">
+                    <a href="{{ url_for('needy_reports', needy_id=report[8]) }}" class="btn btn-view">
+                        👁️ Просмотреть
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+            <h3>Нет одобренных отчетов</h3>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function switchTab(tabName) {
+    // Скрываем все вкладки
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Убираем активный класс с кнопок
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Показываем выбранную вкладку
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function approveReport(reportId) {
+    if (confirm('Одобрить этот отчет?')) {
+        fetch(`/admin/approve_report/${reportId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+}
+
+function rejectReport(reportId) {
+    if (confirm('Отклонить этот отчет?')) {
+        const reason = prompt('Укажите причину отклонения:');
+        if (reason) {
+            fetch(`/admin/reject_report/${reportId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({reason: reason})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

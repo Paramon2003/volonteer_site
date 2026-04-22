@@ -614,6 +614,41 @@
     .needy-photo { animation-delay: 0.1s; }
     .profile-title-block { animation-delay: 0.2s; }
     .info-main-block { animation-delay: 0.3s; }
+
+    .btn-help.completed {
+    background: #A07F74;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.btn-help.completed:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-view-reports {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 12px 25px;
+    background: #5D4037;
+    color: white;
+    border-radius: 25px;
+    text-decoration: none;
+    font-size: 18px;
+    transition: all 0.3s;
+}
+
+.btn-view-reports:hover {
+    background: #4a322a;
+    color: white;
+    transform: scale(1.02);
+}
+
+.report-pending {
+    margin-top: 15px;
+    color: #FF6F61;
+    font-style: italic;
+}
 </style>
 
 <div class="needy-profile-page">
@@ -677,7 +712,7 @@
                     <div class="avatar-circle">👤</div>
                     <div class="avatar-circle more">+{{ (needy.helpers_count or 0) - 3 if (needy.helpers_count or 0) > 3 else 0 }}</div>
                 </div>
-                <div class="reports-link" onclick="scrollToReports()">
+                <div class="reports-link" onclick="location.href='{{ url_for('needy_reports', needy_id=needy[0]) }}'">
                     <span>Отчеты</span>
                     <span class="arrow">→</span>
                 </div>
@@ -692,8 +727,16 @@
 
             <!-- Кнопка помочь -->
             <div class="help-button">
-                <button class="btn-help" onclick="openPaymentModal()">помочь</button>
-            </div>
+    {% if needy[12] == 'completed' %}
+        <button class="btn-help completed" disabled>
+            <span>✅ Сбор завершен</span>
+        </button>
+    {% else %}
+        <button class="btn-help" onclick="openPaymentModal()">
+            <span>❤️ Помочь</span>
+        </button>
+    {% endif %}
+</div>
         </div>
     </div>
 </div>

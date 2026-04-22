@@ -200,6 +200,47 @@ def init_db():
                 created_at TEXT,
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )''')
+
+        # Таблица для детализации расходов в отчетах
+        c.execute('''CREATE TABLE IF NOT EXISTS report_expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id INTEGER,
+                breakdown TEXT,
+                total_amount REAL,
+                created_at TEXT,
+                FOREIGN KEY(report_id) REFERENCES reports(id)
+            )''')
+
+        # Добавляем новые колонки в needies
+        c.execute("PRAGMA table_info(needies)")
+        columns = [col[1] for col in c.fetchall()]
+
+        if 'report_created' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN report_created INTEGER DEFAULT 0')
+        if 'report_id' not in columns:
+            c.execute('ALTER TABLE needies ADD COLUMN report_id INTEGER')
+
+        # Таблица для комментариев к отчетам
+        c.execute('''CREATE TABLE IF NOT EXISTS report_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id INTEGER,
+                user_id INTEGER,
+                comment TEXT,
+                created_at TEXT,
+                FOREIGN KEY(report_id) REFERENCES reports(id),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
+
+        # Таблица для подписок на нуждающихся
+        c.execute('''CREATE TABLE IF NOT EXISTS needy_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                needy_id INTEGER,
+                created_at TEXT,
+                UNIQUE(user_id, needy_id),
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(needy_id) REFERENCES needies(id)
+            )''')
         conn.commit()
 
 
@@ -285,6 +326,62 @@ def check_and_award_badges(user_id):
             badges_earned.append('🔥 Постоянный помощник')
 
         return badges_earned
+
+
+def create_notification(user_id, n_type, title, message, link=None):
+    """Создание уведомления для пользователя"""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            c = conn.cursor()
+            c.execute('''INSERT INTO notifications 
+                        (user_id, type, title, message, link, created_at, is_read)
+                        VALUES (?, ?, ?, ?, ?, ?, 0)''',
+                      (user_id, n_type, title, message, link, datetime.now().isoformat()))
+            conn.commit()
+    except Exception as e:
+        print(f"Error creating notification: {e}")
+
+
+def check_organization_badges(org_id):
+    """Проверяет и выдает достижения организации"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Получаем статистику
+        c.execute('''SELECT 
+                        (SELECT COUNT(*) FROM needies WHERE organization_id = ?) as total_needies,
+                        (SELECT COUNT(*) FROM reports WHERE user_id = ? AND status = 'approved') as total_reports,
+                        (SELECT COALESCE(SUM(funds_collected), 0) FROM needies WHERE organization_id = ?) as total_funds
+                     ''', (org_id, org_id, org_id))
+        stats = c.fetchone()
+
+        badges_to_add = []
+
+        if stats[0] >= 1 and not has_badge(org_id, 'first_needy'):
+            badges_to_add.append(('Первый подопечный', '🌟', 'first_needy'))
+        if stats[0] >= 5 and not has_badge(org_id, 'five_needies'):
+            badges_to_add.append(('5 подопечных', '🏆', 'five_needies'))
+        if stats[1] >= 1 and not has_badge(org_id, 'first_report'):
+            badges_to_add.append(('Первый отчет', '📋', 'first_report'))
+        if stats[2] >= 100000 and not has_badge(org_id, 'major_funds'):
+            badges_to_add.append(('Крупный сбор', '💰', 'major_funds'))
+
+        for badge in badges_to_add:
+            c.execute('''INSERT INTO badges (user_id, badge_name, badge_icon, earned_date, badge_type)
+                        VALUES (?, ?, ?, ?, ?)''',
+                      (org_id, badge[0], badge[1], datetime.now().isoformat(), badge[2]))
+
+        conn.commit()
+        return badges_to_add
+
+
+def has_badge(user_id, badge_type):
+    """Проверяет, есть ли у пользователя достижение"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT id FROM badges WHERE user_id = ? AND badge_type = ?',
+                  (user_id, badge_type))
+        return c.fetchone() is not None
 
 
 @app.route('/choose-role')
@@ -427,6 +524,7 @@ def index():
 
 
 # --- Личный кабинет ---
+
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -445,64 +543,200 @@ def dashboard():
             session.clear()
             return redirect(url_for('login'))
 
-        # Получаем отчеты пользователя с именами нуждающихся
-        c.execute('''SELECT r.text, r.photo, r.created_at, n.name as needy_name 
-                     FROM reports r
-                     JOIN needies n ON n.id = r.needy_id
-                     WHERE r.user_id = ?
-                     ORDER BY r.created_at DESC
-                     LIMIT 10''', (session['user_id'],))
-        reports_data = c.fetchall()
+        # Преобразуем в словарь для удобства
+        user = {
+            'id': user_data[0],
+            'name': user_data[1],
+            'email': user_data[2],
+            'phone': user_data[3],
+            'role': user_data[4],
+            'photo': user_data[5],
+            'rating': user_data[6],
+            'completed_tasks': user_data[7],
+            'created_at': user_data[8],
+            'is_verified': user_data[9],
+            'organization_description': user_data[10]
+        }
 
-        reports = []
-        for r in reports_data:
-            reports.append({
-                'text': r[0],
-                'photo': r[1],
-                'created_at': r[2],
-                'needy_name': r[3]
-            })
+        # Проверяем, есть ли таблица notifications и нужные колонки в needies
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'")
+        has_notifications = c.fetchone() is not None
 
-        # Получаем активные задачи (в процессе или ожидающие)
-        c.execute('''SELECT id, title, description, status 
-                     FROM help_tasks 
-                     WHERE assigned_to = ? AND status IN ('pending', 'in_progress')
-                     ORDER BY created_at DESC
-                     LIMIT 5''', (session['user_id'],))
-        tasks_data = c.fetchall()
+        # Проверяем наличие новых колонок в needies
+        c.execute("PRAGMA table_info(needies)")
+        needies_columns = [col[1] for col in c.fetchall()]
+        has_collection_status = 'collection_status' in needies_columns
+        has_report_created = 'report_created' in needies_columns
 
-        active_tasks = []
-        in_progress_count = 0
-        for t in tasks_data:
-            active_tasks.append({
-                'id': t[0],
-                'title': t[1],
-                'description': t[2] or '',
-                'status': t[3]
-            })
-            if t[3] == 'in_progress':
-                in_progress_count += 1
+        # Для организаций - получаем особые данные
+        if user['role'] == 'organization':
+            # Активные сборы (в процессе)
+            if has_collection_status:
+                c.execute('''SELECT id, name, photo, funds_collected, goal, 
+                                    collection_status, help_info
+                             FROM needies 
+                             WHERE organization_id = ? 
+                             AND status = 'approved' 
+                             AND is_active = 1
+                             AND collection_status = 'active'
+                             ORDER BY created_at DESC''', (session['user_id'],))
+            else:
+                # Если колонки collection_status нет, используем старую логику
+                c.execute('''SELECT id, name, photo, funds_collected, goal, 
+                                    'active' as collection_status, help_info
+                             FROM needies 
+                             WHERE organization_id = ? 
+                             AND status = 'approved' 
+                             AND is_active = 1
+                             ORDER BY created_at DESC''', (session['user_id'],))
+            active_collections = c.fetchall()
 
-        completed_tasks_count = user_data[7] if user_data[7] else 0
-        user_rating = user_data[6] if user_data[6] else 0
-        is_verified = user_data[9] if user_data[9] else 0
+            # Завершенные сборы без отчета (задачи в процессе)
+            if has_collection_status and has_report_created:
+                c.execute('''SELECT id, name, photo, funds_collected, goal,
+                                    completed_date
+                             FROM needies 
+                             WHERE organization_id = ? 
+                             AND collection_status = 'completed'
+                             AND (report_created = 0 OR report_created IS NULL)
+                             ORDER BY completed_date DESC''', (session['user_id'],))
+            else:
+                # Если колонок нет, возвращаем пустой список
+                c.execute('''SELECT id, name, photo, funds_collected, goal,
+                                    created_at as completed_date
+                             FROM needies 
+                             WHERE organization_id = ? 
+                             AND funds_collected >= goal
+                             AND goal > 0
+                             ORDER BY created_at DESC''', (session['user_id'],))
+            pending_reports = c.fetchall()
 
-        return render_template('dashboard.html',
-                               user_id=user_data[0],
-                               user_name=user_data[1],
-                               user_email=user_data[2],
-                               user_phone=user_data[3],
-                               user_role=user_data[4],
-                               user_photo=user_data[5],
-                               user_rating=user_rating,
-                               completed_tasks=completed_tasks_count,
-                               in_progress_tasks=in_progress_count,
-                               created_at=user_data[8],
-                               is_verified=is_verified,
-                               organization_description=user_data[10] if len(user_data) > 10 else None,
-                               reports=reports,
-                               active_tasks=active_tasks)
+            # Созданные отчеты
+            c.execute('''SELECT r.id, r.text, r.photo, r.created_at, 
+                                r.status, n.name as needy_name, n.id as needy_id
+                         FROM reports r
+                         JOIN needies n ON r.needy_id = n.id
+                         WHERE r.user_id = ?
+                         ORDER BY r.created_at DESC
+                         LIMIT 10''', (session['user_id'],))
+            reports_data = c.fetchall()
 
+            # Статистика
+            c.execute('''SELECT 
+                            COUNT(*) as total_needies,
+                            COALESCE(SUM(funds_collected), 0) as total_raised,
+                            COUNT(CASE WHEN funds_collected >= goal AND goal > 0 THEN 1 END) as completed_collections
+                         FROM needies 
+                         WHERE organization_id = ?''', (session['user_id'],))
+            stats = c.fetchone()
+
+            # Форматируем отчеты
+            reports = []
+            for r in reports_data:
+                reports.append({
+                    'id': r[0],
+                    'text': r[1],
+                    'photo': r[2],
+                    'created_at': r[3],
+                    'status': r[4],
+                    'needy_name': r[5],
+                    'needy_id': r[6]
+                })
+
+            return render_template('dashboard_organization.html',
+                                   user=user,
+                                   active_collections=active_collections,
+                                   pending_reports=pending_reports,
+                                   reports=reports,
+                                   stats=stats,
+                                   has_notifications=has_notifications)
+
+        # Для волонтеров и админов
+        else:
+            # Получаем отчеты пользователя с именами нуждающихся
+            c.execute('''SELECT r.text, r.photo, r.created_at, n.name as needy_name 
+                         FROM reports r
+                         JOIN needies n ON n.id = r.needy_id
+                         WHERE r.user_id = ?
+                         ORDER BY r.created_at DESC
+                         LIMIT 10''', (session['user_id'],))
+            reports_data = c.fetchall()
+
+            reports = []
+            for r in reports_data:
+                reports.append({
+                    'text': r[0],
+                    'photo': r[1],
+                    'created_at': r[2],
+                    'needy_name': r[3]
+                })
+
+            # Получаем активные задачи
+            c.execute('''SELECT id, title, description, status 
+                         FROM help_tasks 
+                         WHERE assigned_to = ? AND status IN ('pending', 'in_progress')
+                         ORDER BY created_at DESC
+                         LIMIT 5''', (session['user_id'],))
+            tasks_data = c.fetchall()
+
+            active_tasks = []
+            in_progress_count = 0
+            for t in tasks_data:
+                active_tasks.append({
+                    'id': t[0],
+                    'title': t[1],
+                    'description': t[2] or '',
+                    'status': t[3]
+                })
+                if t[3] == 'in_progress':
+                    in_progress_count += 1
+
+            completed_tasks_count = user['completed_tasks'] or 0
+            user_rating = user['rating'] or 0
+            is_verified = user['is_verified'] or 0
+
+            # Получаем пожертвования пользователя
+            c.execute('''SELECT d.amount, d.created_at, n.name as needy_name, n.id as needy_id
+                         FROM donations d
+                         JOIN needies n ON d.needy_id = n.id
+                         WHERE d.user_id = ?
+                         ORDER BY d.created_at DESC
+                         LIMIT 5''', (session['user_id'],))
+            donations_data = c.fetchall()
+
+            donations = []
+            for d in donations_data:
+                donations.append({
+                    'amount': d[0],
+                    'created_at': d[1],
+                    'needy_name': d[2],
+                    'needy_id': d[3]
+                })
+
+            # Получаем количество непрочитанных уведомлений
+            unread_notifications = 0
+            if has_notifications:
+                c.execute('''SELECT COUNT(*) FROM notifications 
+                             WHERE user_id = ? AND is_read = 0''', (session['user_id'],))
+                unread_notifications = c.fetchone()[0]
+
+            return render_template('dashboard.html',
+                                   user_id=user['id'],
+                                   user_name=user['name'],
+                                   user_email=user['email'],
+                                   user_phone=user['phone'],
+                                   user_role=user['role'],
+                                   user_photo=user['photo'],
+                                   user_rating=user_rating,
+                                   completed_tasks=completed_tasks_count,
+                                   in_progress_tasks=in_progress_count,
+                                   created_at=user['created_at'],
+                                   is_verified=is_verified,
+                                   organization_description=user['organization_description'],
+                                   reports=reports,
+                                   active_tasks=active_tasks,
+                                   donations=donations,
+                                   unread_notifications=unread_notifications)
 # app.py - обновленный список нуждающихся
 
 @app.route('/needies')
@@ -551,7 +785,7 @@ def needy_profile(id):
         # Явно указываем нужные колонки вместо SELECT *
         c.execute('''SELECT n.id, n.name, n.tag, n.photo, n.description, n.address, 
                             n.funds_collected, n.lat, n.lng, n.help_info, n.goal, 
-                            n.urgency_level, n.status, n.created_at, n.organization_id,
+                            n.urgency_level, n.collection_status, n.created_at, n.organization_id,
                             (SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = n.id) as helpers_count
                      FROM needies n 
                      WHERE n.id = ?''', (id,))
@@ -654,6 +888,42 @@ def report(needy_id):
     return render_template('report_form.html', needy_id=needy_id)
 
 
+@app.route('/needy/<int:needy_id>/reports')
+def needy_reports(needy_id):
+    """Страница со всеми отчетами по нуждающемуся"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Получаем информацию о нуждающемся
+        c.execute('''SELECT id, name, photo, funds_collected, goal, 
+                            collection_status, help_info
+                     FROM needies WHERE id = ?''', (needy_id,))
+        needy = c.fetchone()
+
+        if not needy:
+            flash('Нуждающийся не найден')
+            return redirect(url_for('needies_list'))
+
+        # Получаем все одобренные отчеты
+        c.execute('''SELECT r.id, r.text, r.photo, r.created_at, 
+                            u.name as org_name, u.id as org_id,
+                            (SELECT SUM(amount) FROM donations WHERE needy_id = r.needy_id) as total_donated
+                     FROM reports r
+                     JOIN users u ON r.user_id = u.id
+                     WHERE r.needy_id = ? AND r.status = 'approved'
+                     ORDER BY r.created_at DESC''', (needy_id,))
+        reports = c.fetchall()
+
+        # Статистика расходования средств
+        c.execute('''SELECT SUM(amount) FROM reports_expenses WHERE report_id IN 
+                     (SELECT id FROM reports WHERE needy_id = ?)''', (needy_id,))
+        total_spent = c.fetchone()[0] or 0
+
+        return render_template('needy_reports.html',
+                               needy=needy,
+                               reports=reports,
+                               total_spent=total_spent)
+
 # --- Платежи (заглушка) ---
 @app.route('/donate/<int:needy_id>', methods=['POST'])
 def donate(needy_id):
@@ -742,6 +1012,233 @@ def donate(needy_id):
             'message': 'Спасибо за помощь! ❤️',
             'badge_earned': check_and_award_badges(session['user_id'])
         })
+
+
+@app.route('/organization/<int:org_id>')
+def organization_profile(org_id):
+    """Публичный профиль организации"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Информация об организации
+        c.execute('''SELECT id, name, email, phone, photo, organization_description,
+                            rating, completed_tasks, created_at, is_verified
+                     FROM users WHERE id = ? AND role = 'organization' ''', (org_id,))
+        org_data = c.fetchone()
+
+        if not org_data:
+            flash('Организация не найдена')
+            return redirect(url_for('index'))
+
+        org = {
+            'id': org_data[0],
+            'name': org_data[1],
+            'email': org_data[2],
+            'phone': org_data[3],
+            'photo': org_data[4],
+            'description': org_data[5],
+            'rating': org_data[6],
+            'completed_tasks': org_data[7],
+            'created_at': org_data[8],
+            'is_verified': org_data[9]
+        }
+
+        # Активные нуждающиеся организации
+        c.execute('''SELECT n.id, n.name, n.photo, n.description, n.funds_collected, n.goal,
+                            n.collection_status, n.help_info, n.urgency_level, n.created_at,
+                            (SELECT COUNT(DISTINCT user_id) FROM donations WHERE needy_id = n.id) as helpers_count
+                     FROM needies n
+                     WHERE n.organization_id = ? AND n.status = 'approved' AND n.is_active = 1
+                     ORDER BY 
+                        CASE n.collection_status 
+                            WHEN 'active' THEN 1 
+                            WHEN 'completed' THEN 2 
+                        END,
+                        n.urgency_level ASC,
+                        n.created_at DESC''', (org_id,))
+        active_needies = c.fetchall()
+
+        # Завершенные нуждающиеся
+        c.execute('''SELECT id, name, photo, funds_collected, goal, completed_date, report_created
+                     FROM needies 
+                     WHERE organization_id = ? AND collection_status = 'completed'
+                     ORDER BY completed_date DESC
+                     LIMIT 10''', (org_id,))
+        completed_needies = c.fetchall()
+
+        # Статистика организации
+        c.execute('''SELECT 
+                        COUNT(DISTINCT n.id) as total_needies,
+                        COALESCE(SUM(n.funds_collected), 0) as total_funds,
+                        COUNT(DISTINCT d.user_id) as total_donors,
+                        (SELECT COUNT(*) FROM reports WHERE user_id = ? AND status = 'approved') as total_reports
+                     FROM needies n
+                     LEFT JOIN donations d ON n.id = d.needy_id
+                     WHERE n.organization_id = ?''', (org_id, org_id))
+        stats_data = c.fetchone()
+
+        stats = {
+            'total_needies': stats_data[0] or 0,
+            'total_funds': stats_data[1] or 0,
+            'total_donors': stats_data[2] or 0,
+            'total_reports': stats_data[3] or 0
+        }
+
+        # Получаем последние отчеты
+        c.execute('''SELECT r.id, r.text, r.photo, r.created_at, n.name as needy_name, n.id as needy_id
+                     FROM reports r
+                     JOIN needies n ON r.needy_id = n.id
+                     WHERE r.user_id = ? AND r.status = 'approved'
+                     ORDER BY r.created_at DESC
+                     LIMIT 5''', (org_id,))
+        reports = c.fetchall()
+
+        # Получаем достижения организации
+        c.execute('''SELECT badge_name, badge_icon, earned_date 
+                     FROM badges 
+                     WHERE user_id = ?
+                     ORDER BY earned_date DESC''', (org_id,))
+        badges = c.fetchall()
+
+        return render_template('organization_profile.html',
+                               org=org,
+                               active_needies=active_needies,
+                               completed_needies=completed_needies,
+                               stats=stats,
+                               reports=reports,
+                               badges=badges)
+
+
+@app.route('/create_report/<int:needy_id>', methods=['GET', 'POST'])
+def create_report(needy_id):
+    """Создание отчета о расходовании средств (только для организации)"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Проверяем права
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if user[0] not in ['organization', 'admin']:
+            flash('Только организации могут создавать отчеты')
+            return redirect(url_for('needy_profile', id=needy_id))
+
+        # Проверяем, что нуждающийся принадлежит этой организации
+        c.execute('''SELECT n.id, n.name, n.photo, n.funds_collected, n.goal, n.help_info,
+                                    n.collection_status, n.organization_id, n.report_created
+                             FROM needies n
+                             WHERE n.id = ?''', (needy_id,))
+        needy = c.fetchone()
+
+        if not needy:
+            flash('Нуждающийся не найден')
+            return redirect(url_for('dashboard'))
+
+        # Проверяем, что организация имеет право создавать отчет
+        if needy[7] != session['user_id'] and user[0] != 'admin':
+            flash('Вы можете создавать отчеты только для своих подопечных')
+            return redirect(url_for('needy_profile', id=needy_id))
+
+        # Проверяем, что сбор завершен
+        if needy[6] != 'completed':
+            flash('Отчет можно создать только после полного сбора средств')
+            return redirect(url_for('needy_profile', id=needy_id))
+
+        if needy[8]:
+            flash('Отчет для этого нуждающегося уже создан')
+            return redirect(url_for('needy_profile', id=needy_id))
+
+        needy_data = {
+            'id': needy[0],
+            'name': needy[1],
+            'photo': needy[2],
+            'collected': needy[3],
+            'goal': needy[4],
+            'help_info': needy[5]
+        }
+
+        if request.method == 'POST':
+            text = request.form.get('text', '').strip()
+            expenses_breakdown = request.form.get('expenses_breakdown', '')
+
+            # Валидация
+            if len(text) < 50:
+                flash('Пожалуйста, напишите более подробный отчет (минимум 50 символов)')
+                return render_template('create_report.html', needy=needy)
+
+            # Обработка фото
+            photos = []
+            if 'photos' in request.files:
+                files = request.files.getlist('photos')
+                for f in files[:5]:  # Максимум 5 фото
+                    if f and f.filename:
+                        filename = secure_filename(f"{datetime.now().timestamp()}_{f.filename}")
+                        photo_path = os.path.join(UPLOAD_FOLDER, filename)
+                        f.save(photo_path)
+                        photos.append(photo_path)
+
+            if not photos:
+                flash('Добавьте хотя бы одну фотографию')
+                return render_template('create_report.html', needy=needy)
+
+            photos_str = ','.join(photos)
+
+            # Создаем отчет
+            c.execute('''INSERT INTO reports 
+                                (user_id, needy_id, photo, text, status, created_at)
+                                VALUES (?, ?, ?, ?, 'pending', ?)''',
+                      (session['user_id'], needy_id, photos_str, text,
+                       datetime.now().isoformat()))
+            report_id = c.lastrowid
+
+            # Сохраняем детализацию расходов
+            if expenses_breakdown:
+                c.execute('''INSERT INTO report_expenses 
+                                    (report_id, breakdown, total_amount, created_at)
+                                    VALUES (?, ?, ?, ?)''',
+                          (report_id, expenses_breakdown, needy['collected'],
+                           datetime.now().isoformat()))
+
+            # Обновляем статус нуждающегося
+            c.execute('''UPDATE needies 
+                                SET report_created = 1,
+                                    report_id = ?
+                                WHERE id = ?''', (report_id, needy_id))
+
+            # Обновляем счетчик выполненных задач у организации
+            c.execute('''UPDATE users 
+                                SET completed_tasks = COALESCE(completed_tasks, 0) + 1
+                                WHERE id = ?''', (session['user_id'],))
+
+            # Начисляем рейтинг
+            c.execute('''UPDATE users 
+                                SET rating = COALESCE(rating, 0) + 0.5
+                                WHERE id = ?''', (session['user_id'],))
+
+            conn.commit()
+
+            # Создаем уведомления для всех жертвователей
+            c.execute('''SELECT DISTINCT user_id FROM donations WHERE needy_id = ?''', (needy_id,))
+            donors = c.fetchall()
+
+            for (donor_id,) in donors:
+                create_notification(
+                    donor_id,
+                    'report_created',
+                    '📊 Новый отчет',
+                    f'Опубликован отчет о расходовании средств для {needy["name"]}',
+                    url_for('needy_reports', needy_id=needy_id)
+                )
+
+            # Проверяем достижения
+            check_organization_badges(session['user_id'])
+
+            flash('Отчет успешно создан и отправлен на проверку!', 'success')
+            return redirect(url_for('dashboard'))
+
+        return render_template('create_report.html', needy=needy)
 
 
 #административные маршруты
@@ -1036,6 +1533,98 @@ def delete_user(user_id):
         return redirect(url_for('admin_users'))
 
 
+@app.route('/admin/reports')
+def admin_reports():
+    """Страница администрирования отчетов"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        if c.fetchone()[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Получаем отчеты на проверке
+        c.execute('''SELECT r.id, r.text, r.photo, r.created_at, r.status,
+                            u.name as org_name, u.id as org_id,
+                            n.name as needy_name, n.id as needy_id
+                     FROM reports r
+                     JOIN users u ON r.user_id = u.id
+                     JOIN needies n ON r.needy_id = n.id
+                     WHERE r.status = 'pending'
+                     ORDER BY r.created_at DESC''')
+        pending_reports = c.fetchall()
+
+        # Получаем одобренные отчеты
+        c.execute('''SELECT r.id, r.text, r.photo, r.created_at, r.status,
+                            u.name as org_name, u.id as org_id,
+                            n.name as needy_name, n.id as needy_id
+                     FROM reports r
+                     JOIN users u ON r.user_id = u.id
+                     JOIN needies n ON r.needy_id = n.id
+                     WHERE r.status = 'approved'
+                     ORDER BY r.created_at DESC
+                     LIMIT 20''')
+        approved_reports = c.fetchall()
+
+        return render_template('admin/reports.html',
+                               pending_reports=pending_reports,
+                               approved_reports=approved_reports)
+
+
+@app.route('/admin/approve_report/<int:report_id>')
+def approve_report(report_id):
+    """Одобрение отчета администратором"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Проверяем права админа
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        if c.fetchone()[0] != 'admin':
+            flash('Доступ запрещен')
+            return redirect(url_for('index'))
+
+        # Получаем информацию об отчете
+        c.execute('''SELECT r.needy_id, r.user_id, u.name 
+                     FROM reports r
+                     JOIN users u ON r.user_id = u.id
+                     WHERE r.id = ?''', (report_id,))
+        report_info = c.fetchone()
+
+        # Одобряем отчет
+        c.execute('''UPDATE reports 
+                     SET status = 'approved',
+                         approved_by = ?,
+                         approved_at = ?
+                     WHERE id = ?''',
+                  (session['user_id'], datetime.now().isoformat(), report_id))
+
+        # Начисляем рейтинг организации
+        c.execute('''UPDATE users 
+                     SET rating = rating + 0.5
+                     WHERE id = ?''', (report_info[1],))
+
+        conn.commit()
+
+        # Уведомляем организацию
+        create_notification(
+            report_info[1],
+            'report_approved',
+            '✅ Отчет одобрен',
+            f'Ваш отчет для нуждающегося одобрен администратором',
+            url_for('needy_reports', needy_id=report_info[0])
+        )
+
+        flash('Отчет одобрен')
+        return redirect(url_for('admin_reports'))
+
+
+
 @app.route('/update_profile', methods=['POST'])
 def update_profile():
     if 'user_id' not in session:
@@ -1122,6 +1711,72 @@ def reset_collections():
             'reset_count': reset_count,
             'message': f'Сброшено {reset_count} сборов'
         })
+
+
+@app.route('/notifications')
+def notifications():
+    """Страница уведомлений пользователя"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT id, type, title, message, link, is_read, created_at
+                     FROM notifications 
+                     WHERE user_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50''', (session['user_id'],))
+        notifications_list = c.fetchall()
+
+        # Отмечаем как прочитанные
+        c.execute('''UPDATE notifications SET is_read = 1 
+                     WHERE user_id = ? AND is_read = 0''', (session['user_id'],))
+        conn.commit()
+
+    return render_template('notifications.html', notifications=notifications_list)
+
+
+@app.route('/api/notifications/count')
+def notifications_count():
+    """API для получения количества непрочитанных уведомлений"""
+    if 'user_id' not in session:
+        return jsonify({'count': 0})
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT COUNT(*) FROM notifications 
+                     WHERE user_id = ? AND is_read = 0''', (session['user_id'],))
+        count = c.fetchone()[0]
+
+    return jsonify({'count': count})
+
+
+@app.route('/api/needy/<int:needy_id>/subscribe', methods=['POST'])
+def subscribe_to_needy(needy_id):
+    """Подписка на обновления нуждающегося"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        try:
+            c.execute('''INSERT INTO needy_subscriptions (user_id, needy_id, created_at)
+                        VALUES (?, ?, ?)''',
+                      (session['user_id'], needy_id, datetime.now().isoformat()))
+            conn.commit()
+
+            create_notification(
+                session['user_id'],
+                'subscription',
+                '🔔 Подписка оформлена',
+                'Вы будете получать уведомления о новых отчетах',
+                url_for('needy_profile', id=needy_id)
+            )
+
+            return jsonify({'success': True, 'message': 'Подписка оформлена'})
+        except sqlite3.IntegrityError:
+            return jsonify({'success': False, 'error': 'Вы уже подписаны'})
 
 # --- Запуск ---
 if __name__ == '__main__':

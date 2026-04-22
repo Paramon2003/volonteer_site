@@ -1,0 +1,796 @@
+{% extends "layout.html" %}
+{% block title %}Создание отчета{% endblock %}
+{% block content %}
+<style>
+    .create-report-page {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        min-height: calc(100vh - 80px);
+    }
+
+    .page-header {
+        margin-bottom: 40px;
+        text-align: center;
+    }
+
+    .page-title {
+        font-family: 'Gilroy', sans-serif;
+        font-size: clamp(28px, 5vw, 42px);
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+        font-size: 18px;
+        color: #666;
+    }
+
+    .needy-info-card {
+        background: linear-gradient(135deg, #FFA59D, #FFD7D3);
+        border-radius: 30px;
+        padding: 25px;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 25px;
+        flex-wrap: wrap;
+    }
+
+    .needy-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        flex-shrink: 0;
+    }
+
+    .needy-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .needy-details {
+        flex: 1;
+    }
+
+    .needy-details h2 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    .funds-info {
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .fund-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .fund-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .fund-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .fund-value.highlight {
+        color: #4CAF50;
+    }
+
+    .report-form-card {
+        background: white;
+        border-radius: 30px;
+        padding: 35px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .form-section {
+        margin-bottom: 30px;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 10px;
+        color: #555;
+        font-size: 16px;
+    }
+
+    .form-label .required {
+        color: #FF6F61;
+        margin-left: 5px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 15px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 15px;
+        font-size: 16px;
+        transition: all 0.3s;
+        font-family: inherit;
+        resize: vertical;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #FF6F61;
+        box-shadow: 0 0 0 3px rgba(255, 111, 97, 0.1);
+    }
+
+    .photo-upload-area {
+        border: 2px dashed #FFA59D;
+        border-radius: 20px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #FFF6F0;
+    }
+
+    .photo-upload-area:hover {
+        border-color: #FF6F61;
+        background: #FFE4E1;
+    }
+
+    .photo-upload-area i {
+        font-size: 48px;
+        color: #FF6F61;
+        margin-bottom: 10px;
+    }
+
+    .upload-text {
+        font-size: 16px;
+        color: #666;
+    }
+
+    .upload-subtext {
+        font-size: 14px;
+        color: #999;
+        margin-top: 5px;
+    }
+
+    #photoInput {
+        display: none;
+    }
+
+    .photos-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .photo-preview-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 15px;
+        overflow: hidden;
+        background: #f0f0f0;
+    }
+
+    .photo-preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .remove-photo {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: #FF6F61;
+        transition: all 0.3s;
+    }
+
+    .remove-photo:hover {
+        background: #FF6F61;
+        color: white;
+    }
+
+    .expenses-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    .expenses-table th {
+        text-align: left;
+        padding: 12px;
+        background: #f5f5f5;
+        font-weight: 600;
+        color: #555;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .expenses-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .expenses-table input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .expenses-table input:focus {
+        outline: none;
+        border-color: #FF6F61;
+    }
+
+    .btn-add-expense {
+        margin-top: 15px;
+        padding: 10px 20px;
+        background: #f0f0f0;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #666;
+        transition: all 0.3s;
+    }
+
+    .btn-add-expense:hover {
+        background: #FF6F61;
+        color: white;
+    }
+
+    .total-expenses {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .total-label {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .total-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #4CAF50;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 20px;
+        margin-top: 30px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 15px 35px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #FF6F61, #FF8E83);
+        color: white;
+        box-shadow: 0 5px 20px rgba(255, 111, 97, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 111, 97, 0.4);
+    }
+
+    .btn-secondary {
+        background: #f0f0f0;
+        color: #666;
+    }
+
+    .btn-secondary:hover {
+        background: #e0e0e0;
+    }
+
+    .info-message {
+        background: #E3F2FD;
+        border-left: 4px solid #2196F3;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        color: #1565C0;
+    }
+
+    .warning-message {
+        background: #FFF3E0;
+        border-left: 4px solid #FF9800;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        color: #E65100;
+    }
+
+    .character-count {
+        text-align: right;
+        font-size: 12px;
+        color: #999;
+        margin-top: 5px;
+    }
+
+    @media (max-width: 768px) {
+        .create-report-page {
+            padding: 20px 15px;
+        }
+
+        .report-form-card {
+            padding: 20px;
+        }
+
+        .needy-info-card {
+            padding: 20px;
+        }
+
+        .needy-avatar {
+            width: 80px;
+            height: 80px;
+        }
+
+        .needy-details h2 {
+            font-size: 22px;
+        }
+
+        .fund-value {
+            font-size: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .photos-preview {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Анимации */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .report-form-card {
+        animation: fadeIn 0.5s ease;
+    }
+</style>
+
+<div class="create-report-page">
+    <div class="page-header">
+        <h1 class="page-title">📋 Создание отчета</h1>
+        <p class="page-subtitle">Расскажите, как были потрачены собранные средства</p>
+    </div>
+
+    <!-- Информация о нуждающемся -->
+    <div class="needy-info-card">
+        <div class="needy-avatar">
+            {% if needy[5] %}
+                <img src="/{{ needy[5] }}" alt="{{ needy[1] }}">
+            {% else %}
+                <div style="width: 100%; height: 100%; background: #FFD7D3; display: flex; align-items: center; justify-content: center; font-size: 40px;">📸</div>
+            {% endif %}
+        </div>
+        <div class="needy-details">
+            <h2>{{ needy[1] }}</h2>
+            <div class="funds-info">
+                <div class="fund-item">
+                    <span class="fund-label">Собрано средств</span>
+                    <span class="fund-value highlight">{{ "%.0f"|format(needy[2] or 0) }} ₽</span>
+                </div>
+                <div class="fund-item">
+                    <span class="fund-label">Цель сбора</span>
+                    <span class="fund-value">{{ "%.0f"|format(needy[3] or 0) }} ₽</span>
+                </div>
+                <div class="fund-item">
+                    <span class="fund-label">Тип помощи</span>
+                    <span class="fund-value">{{ needy[5] or 'Не указан' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма создания отчета -->
+    <div class="report-form-card">
+        <form method="POST" enctype="multipart/form-data" id="reportForm">
+
+            <!-- Информационное сообщение -->
+            <div class="info-message">
+                <strong>💡 Важно!</strong> Отчет будет проверен администратором перед публикацией.
+                Указывайте только достоверную информацию и прикладывайте подтверждающие документы (чеки, фото).
+            </div>
+
+            <!-- Основной текст отчета -->
+            <div class="form-section">
+                <div class="section-title">
+                    <span>📝 Описание</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        Расскажите о проделанной работе
+                        <span class="required">*</span>
+                    </label>
+                    <textarea
+                        name="text"
+                        class="form-control"
+                        id="reportText"
+                        rows="6"
+                        placeholder="Опишите, какая помощь была оказана, что было куплено, как проходил процесс..."
+                        required
+                        minlength="50"
+                        maxlength="2000"></textarea>
+                    <div class="character-count">
+                        <span id="charCount">0</span> / 2000 символов
+                    </div>
+                </div>
+            </div>
+
+            <!-- Фотографии -->
+            <div class="form-section">
+                <div class="section-title">
+                    <span>📸 Фотографии</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        Добавьте фото (до 5 штук)
+                        <span class="required">*</span>
+                    </label>
+
+                    <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+                        <div>📷</div>
+                        <div class="upload-text">Нажмите или перетащите фото</div>
+                        <div class="upload-subtext">JPG, PNG, WEBP (макс. 5 МБ)</div>
+                    </div>
+
+                    <input type="file" name="photos" id="photoInput" accept="image/*" multiple style="display: none;">
+
+                    <div class="photos-preview" id="photosPreview"></div>
+
+                    <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                        <strong>Рекомендации:</strong> Фото чеков, процесса помощи, результата
+                    </div>
+                </div>
+            </div>
+
+            <!-- Детализация расходов -->
+            <div class="form-section">
+                <div class="section-title">
+                    <span>💰 Расходование средств</span>
+                </div>
+
+                <div class="warning-message">
+                    <strong>⚠️ Внимание!</strong> Укажите, на что конкретно были потрачены средства.
+                    Это повышает доверие жертвователей.
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Статьи расходов</label>
+
+                    <table class="expenses-table" id="expensesTable">
+                        <thead>
+                            <tr>
+                                <th>Наименование</th>
+                                <th style="width: 150px;">Сумма (₽)</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesBody">
+                            <tr>
+                                <td><input type="text" name="expense_name[]" placeholder="Например: Продукты питания" class="expense-name"></td>
+                                <td><input type="number" name="expense_amount[]" placeholder="0" min="0" step="100" class="expense-amount"></td>
+                                <td><button type="button" class="remove-expense" onclick="removeExpenseRow(this)" style="display: none;">✕</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <button type="button" class="btn-add-expense" onclick="addExpenseRow()">
+                        ➕ Добавить статью расхода
+                    </button>
+
+                    <div class="total-expenses">
+                        <span class="total-label">Итого потрачено:</span>
+                        <span class="total-value" id="totalExpenses">0 ₽</span>
+                    </div>
+
+                    <!-- Скрытое поле для передачи JSON с расходами -->
+                    <input type="hidden" name="expenses_breakdown" id="expensesBreakdown">
+                </div>
+            </div>
+
+            <!-- Дополнительная информация -->
+            <div class="form-section">
+                <div class="section-title">
+                    <span>📌 Дополнительно</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ссылки на документы (необязательно)</label>
+                    <input type="url" name="document_link" class="form-control" placeholder="https://...">
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                        Например, ссылка на Google Docs с отсканированными чеками
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="form-actions">
+                <a href="{{ url_for('needy_profile', id=needy[0]) }}" class="btn btn-secondary">Отмена</a>
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    📤 Отправить на проверку
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let selectedFiles = [];
+
+    // Обработка выбора фотографий
+    const photoInput = document.getElementById('photoInput');
+    const photosPreview = document.getElementById('photosPreview');
+
+    photoInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+
+        // Проверяем количество
+        if (selectedFiles.length + files.length > 5) {
+            alert('Максимум 5 фотографий');
+            return;
+        }
+
+        files.forEach(file => {
+            // Проверяем размер (5 МБ)
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`Файл ${file.name} слишком большой (макс. 5 МБ)`);
+                return;
+            }
+
+            // Проверяем тип
+            if (!file.type.startsWith('image/')) {
+                alert(`Файл ${file.name} не является изображением`);
+                return;
+            }
+
+            selectedFiles.push(file);
+        });
+
+        updatePhotosPreview();
+    });
+
+    function updatePhotosPreview() {
+        photosPreview.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'photo-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <button type="button" class="remove-photo" onclick="removePhoto(${index})">✕</button>
+                `;
+                photosPreview.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Обновляем input files
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        photoInput.files = dt.files;
+    }
+
+    function removePhoto(index) {
+        selectedFiles.splice(index, 1);
+        updatePhotosPreview();
+    }
+
+    // Drag & Drop для фото
+    const dropArea = document.querySelector('.photo-upload-area');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.style.background = '#FFE4E1');
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.style.background = '#FFF6F0');
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+
+        if (selectedFiles.length + files.length > 5) {
+            alert('Максимум 5 фотографий');
+            return;
+        }
+
+        files.forEach(file => {
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`Файл ${file.name} слишком большой`);
+                return;
+            }
+            selectedFiles.push(file);
+        });
+
+        updatePhotosPreview();
+    });
+
+    // Подсчет символов в тексте
+    const reportText = document.getElementById('reportText');
+    const charCount = document.getElementById('charCount');
+
+    reportText.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+
+        if (this.value.length > 2000) {
+            charCount.style.color = '#FF6F61';
+        } else {
+            charCount.style.color = '#999';
+        }
+    });
+
+    // Управление таблицей расходов
+    function addExpenseRow() {
+        const tbody = document.getElementById('expensesBody');
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td><input type="text" name="expense_name[]" placeholder="Наименование" class="expense-name"></td>
+            <td><input type="number" name="expense_amount[]" placeholder="0" min="0" step="100" class="expense-amount"></td>
+            <td><button type="button" class="remove-expense" onclick="removeExpenseRow(this)">✕</button></td>
+        `;
+        tbody.appendChild(newRow);
+
+        // Добавляем обработчики для новых полей
+        attachExpenseListeners(newRow);
+    }
+
+    function removeExpenseRow(button) {
+        const row = button.closest('tr');
+        if (row.parentNode.children.length > 1) {
+            row.remove();
+            calculateTotal();
+        }
+    }
+
+    function attachExpenseListeners(row) {
+        const amountInput = row.querySelector('.expense-amount');
+        if (amountInput) {
+            amountInput.addEventListener('input', calculateTotal);
+        }
+    }
+
+    function calculateTotal() {
+        const amounts = document.querySelectorAll('.expense-amount');
+        let total = 0;
+
+        amounts.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+
+        document.getElementById('totalExpenses').textContent = total.toLocaleString() + ' ₽';
+
+        // Проверяем, не превышает ли сумма собранные средства
+        const collected = {{ needy[2] or 0 }};
+        if (total > collected) {
+            document.getElementById('totalExpenses').style.color = '#FF6F61';
+        } else {
+            document.getElementById('totalExpenses').style.color = '#4CAF50';
+        }
+    }
+
+    // Инициализация обработчиков для существующих полей
+    document.querySelectorAll('.expense-amount').forEach(input => {
+        input.addEventListener('input', calculateTotal);
+    });
+
+    // Подготовка данных перед отправкой
+    document.getElementById('reportForm').addEventListener('submit', function(e) {
+        // Проверяем длину текста
+        const text = reportText.value.trim();
+        if (text.length < 50) {
+            e.preventDefault();
+            alert('Пожалуйста, напишите более подробный отчет (минимум 50 символов)');
+            return;
+        }
+
+        // Проверяем наличие фото
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            alert('Добавьте хотя бы одну фотографию');
+            return;
+        }
+
+        // Собираем расходы в JSON
+        const expenses = [];
+        const rows = document.querySelectorAll('#expensesBody tr');
+
+        rows.forEach(row => {
+            const name = row.querySelector('.expense-name')?.value;
+            const amount = parseFloat(row.querySelector('.expense-amount')?.value) || 0;
+
+            if (name && amount > 0) {
+                expenses.push({ name, amount });
+            }
+        });
+
+        document.getElementById('expensesBreakdown').value = JSON.stringify(expenses);
+
+        // Показываем индикатор загрузки
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = '⏳ Отправка...';
+        submitBtn.disabled = true;
+    });
+
+    // Инициализация
+    calculateTotal();
+    charCount.textContent = reportText.value.length;
+</script>
+{% endblock %}
