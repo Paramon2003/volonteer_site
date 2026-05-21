@@ -18,9 +18,9 @@
         body {
             font-family: 'Gilroy', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-image: url('{{ url_for("static", filename="hero-bg.png") }}');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             overflow-x: hidden;
         }
 
@@ -29,7 +29,7 @@
             padding-top: 80px;
         }
 
-        /* Стили для шапки (как в Figma) с полупрозрачной красной подложкой */
+        /* Стили для шапки */
         .custom-header {
             position: fixed;
             top: 0;
@@ -42,14 +42,12 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
-            /* Полупрозрачная красная подложка */
             background: #FFA59D;
             backdrop-filter: blur(60px);
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
         }
 
-        /* Эффект при скролле (опционально) */
         .custom-header.scrolled {
             padding: 12px 38px;
             background: #FFBEB7;
@@ -57,6 +55,14 @@
         }
 
         .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Логотип теперь кликабельный */
+        .logo-link {
+            text-decoration: none;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -72,6 +78,11 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-link:hover .logo {
+            transform: scale(1.02);
         }
 
         .logo img {
@@ -158,7 +169,6 @@
             color: #FFFFFF;
         }
 
-        /* Кнопки для авторизованных пользователей */
         .btn-profile {
             background: rgba(255, 255, 255, 0.25);
             width: auto;
@@ -166,90 +176,33 @@
             font-size: 24px;
         }
 
-        /* Адаптивность для планшетов */
         @media (max-width: 1024px) {
-            .custom-header {
-                padding: 15px 20px;
-            }
-            .nav-links {
-                gap: 20px;
-            }
-            .nav-links a {
-                font-size: 24px;
-                line-height: 30px;
-            }
-            .btn-login, .btn-register {
-                font-size: 24px;
-                line-height: 30px;
-                width: auto;
-                padding: 0 20px;
-            }
-            .btn-login {
-                max-width: 280px;
-            }
-            .btn-profile {
-                font-size: 20px;
-            }
+            .custom-header { padding: 15px 20px; }
+            .nav-links { gap: 20px; }
+            .nav-links a { font-size: 24px; line-height: 30px; }
+            .btn-login, .btn-register { font-size: 24px; line-height: 30px; width: auto; padding: 0 20px; }
+            .btn-login { max-width: 280px; }
+            .btn-profile { font-size: 20px; }
         }
 
-        /* Адаптивность для мобильных */
         @media (max-width: 768px) {
-            .main-content {
-                padding-top: 120px;
-            }
-            .custom-header {
-                flex-direction: column;
-                padding: 12px 16px;
-                background: rgba(255, 111, 97, 0.96);
-            }
-            .logo-area {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 16px;
-                margin: 10px 0;
-            }
-            .nav-links a {
-                font-size: 18px;
-                line-height: 24px;
-                color: #FFFFFF;
-            }
-            .auth-buttons {
-                width: 100%;
-                justify-content: center;
-                gap: 12px;
-            }
-            .btn-login, .btn-register {
-                font-size: 18px;
-                line-height: 24px;
-                height: 40px;
-                padding: 0 16px;
-            }
-            .btn-profile {
-                font-size: 16px;
-            }
+            .main-content { padding-top: 120px; }
+            .custom-header { flex-direction: column; padding: 12px 16px; background: rgba(255, 111, 97, 0.96); }
+            .logo-area { width: 100%; justify-content: space-between; }
+            .nav-links { flex-wrap: wrap; justify-content: center; gap: 16px; margin: 10px 0; }
+            .nav-links a { font-size: 18px; line-height: 24px; }
+            .auth-buttons { width: 100%; justify-content: center; gap: 12px; }
+            .btn-login, .btn-register { font-size: 18px; line-height: 24px; height: 40px; padding: 0 16px; }
+            .btn-profile { font-size: 16px; }
         }
 
         @media (max-width: 480px) {
-            .main-content {
-                padding-top: 140px;
-            }
-            .custom-header {
-                padding: 10px 12px;
-            }
-            .logo {
-                width: 50px;
-                height: 50px;
-            }
-            .nav-links a {
-                font-size: 14px;
-            }
+            .main-content { padding-top: 140px; }
+            .custom-header { padding: 10px 12px; }
+            .logo { width: 50px; height: 50px; }
+            .nav-links a { font-size: 14px; }
         }
 
-        /* Стили для flash сообщений */
         .alert-custom {
             position: fixed;
             top: 100px;
@@ -266,60 +219,18 @@
         }
 
         @media (max-width: 768px) {
-            .alert-custom {
-                top: 140px;
-            }
+            .alert-custom { top: 140px; }
         }
-
-        @keyframes bounceIn {
-    0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
-    50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
-    70% { transform: translate(-50%, -50%) scale(0.9); }
-    100% { transform: translate(-50%, -50%) scale(1); }
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-/* Стили для бейджей в профиле */
-.badges-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-.badge-item {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    color: white;
-    padding: 8px 15px;
-    border-radius: 25px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-/* Таймер до следующего сбора */
-.collection-timer {
-    background: #5D4037;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    text-align: center;
-    margin: 15px 0;
-}
     </style>
 </head>
 <body>
     <header class="custom-header" id="mainHeader">
         <div class="logo-area">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.src='https://via.placeholder.com/76'">
-            </div>
+            <a href="{{ url_for('index') }}" class="logo-link">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.src='https://via.placeholder.com/76'">
+                </div>
+            </a>
             <div class="nav-links">
                 <a href="/#about">о проекте</a>
                 <a href="/#organizations">организации</a>
@@ -331,7 +242,9 @@
                     <a href="/dashboard" class="btn-register btn-profile">Профиль</a>
                     <a href="/needies" class="btn-register btn-profile">Нуждающиеся</a>
                     {% if user_role == 'admin' %}
-                        <a href="/admin/users" class="btn-register btn-profile">Админ</a>
+                        <a href="/admin/users" class="btn-register btn-profile">Пользователи</a>
+                        <a href="/admin/needies" class="btn-register btn-profile">Заявки</a>
+                        <a href="/admin/reports" class="btn-register btn-profile">Отчеты</a>
                     {% endif %}
                     {% if user_role == 'organization' or user_role == 'admin' %}
                         <a href="/add_needy" class="btn-register btn-profile">+ Добавить</a>
@@ -364,7 +277,6 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
 
     <script>
-        // Эффект при скролле - меняем отступы
         window.addEventListener('scroll', function() {
             const header = document.getElementById('mainHeader');
             if (window.scrollY > 50) {

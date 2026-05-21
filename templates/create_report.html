@@ -432,19 +432,19 @@
         <div class="needy-details">
             <h2>{{ needy[1] }}</h2>
             <div class="funds-info">
-                <div class="fund-item">
-                    <span class="fund-label">Собрано средств</span>
-                    <span class="fund-value highlight">{{ "%.0f"|format(needy[2] or 0) }} ₽</span>
-                </div>
-                <div class="fund-item">
-                    <span class="fund-label">Цель сбора</span>
-                    <span class="fund-value">{{ "%.0f"|format(needy[3] or 0) }} ₽</span>
-                </div>
-                <div class="fund-item">
-                    <span class="fund-label">Тип помощи</span>
-                    <span class="fund-value">{{ needy[5] or 'Не указан' }}</span>
-                </div>
-            </div>
+    <div class="fund-item">
+        <span class="fund-label">Собрано средств</span>
+        <span class="fund-value highlight">{{ "%.0f"|format(needy[3] or 0) }} ₽</span>
+    </div>
+    <div class="fund-item">
+        <span class="fund-label">Цель сбора</span>
+        <span class="fund-value">{{ "%.0f"|format(needy[4] or 0) }} ₽</span>
+    </div>
+    <div class="fund-item">
+        <span class="fund-label">Тип помощи</span>
+        <span class="fund-value">{{ needy[10] or needy[5] or 'Не указан' }}</span>
+    </div>
+</div>
         </div>
     </div>
 

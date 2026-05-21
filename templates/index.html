@@ -2,7 +2,6 @@
 {% block title %}Мы РЯДОМ - помощь рядом{% endblock %}
 {% block content %}
 <style>
-
     /* Стили специально для главной страницы */
     .hero-section {
         position: relative;
@@ -12,8 +11,6 @@
         overflow-x: hidden;
     }
 
-
-    /* Затемнение */
     .hero-overlay {
         position: fixed;
         top: 0;
@@ -24,7 +21,6 @@
         z-index: 1;
     }
 
-    /* Основной контент поверх фона */
     .hero-content {
         position: relative;
         z-index: 2;
@@ -36,7 +32,6 @@
         align-items: center;
     }
 
-    /* Белый скругленный блок */
     .white-card {
         background: #FFF6F0;
         border-radius: 88px;
@@ -47,7 +42,6 @@
         overflow: hidden;
     }
 
-    /* Контейнер для контента внутри белого блока */
     .card-content {
         display: flex;
         justify-content: space-between;
@@ -57,14 +51,12 @@
         z-index: 2;
     }
 
-    /* Левая часть с текстом */
     .card-left {
         flex: 1;
         min-width: 280px;
         padding-right: 40px;
     }
 
-    /* Текст "Твоя забота: рядом с теми, кто нуждается" */
     .main-title {
         font-family: 'Gilroy', sans-serif;
         font-weight: 1000;
@@ -75,7 +67,6 @@
         margin-bottom: 60px;
     }
 
-    /* Кнопка присоединиться */
     .join-block {
         background: #FF6F61;
         border-radius: 46px;
@@ -103,7 +94,6 @@
         text-decoration: none;
     }
 
-    /* Правая часть с изображением (ВНУТРИ белого блока) */
     .card-right {
         flex-shrink: 0;
         width: 553px;
@@ -126,7 +116,7 @@
         display: block;
     }
 
-    /* ============ БЛОК "О ПРОЕКТЕ" ============ */
+    /* Блок "О проекте" */
     .about-project-section {
         position: relative;
         width: 100%;
@@ -143,7 +133,6 @@
         min-height: 1682px;
     }
 
-    /* Большой серый блок Rectangle 10 */
     .about-main-block {
         position: absolute;
         width: 1334px;
@@ -156,7 +145,6 @@
         z-index: 1;
     }
 
-    /* Текст внутри большого блока */
     .about-main-text {
         position: absolute;
         width: 1249px;
@@ -173,7 +161,6 @@
         z-index: 2;
     }
 
-    /* Левое изображение Rectangle 1 */
     .about-left-image {
         position: absolute;
         width: 495px;
@@ -188,7 +175,6 @@
         z-index: 1;
     }
 
-    /* Розовый блок Rectangle 4 - теперь с текстом */
     .about-pink-block {
         position: absolute;
         width: 783px;
@@ -214,7 +200,6 @@
         color: #000000;
     }
 
-    /* Правое изображение Rectangle 8 */
     .about-right-image {
         position: absolute;
         width: 484px;
@@ -229,7 +214,6 @@
         z-index: 1;
     }
 
-    /* Темный блок Rectangle 9 */
     .about-dark-block {
         position: absolute;
         width: 783px;
@@ -242,7 +226,6 @@
         z-index: 1;
     }
 
-    /* Текст внутри темного блока */
     .about-dark-text {
         position: absolute;
         width: 729px;
@@ -259,166 +242,232 @@
         z-index: 2;
     }
 
-    /* Адаптивность для блока "О проекте" */
-    @media (max-width: 1200px) {
-        .about-main-text {
-            font-size: 28px;
-            line-height: 38px;
-            left: 80px;
-            top: 180px;
-            width: calc(100% - 160px);
-        }
-        .about-main-block {
-            height: auto;
-            min-height: 500px;
-        }
-        .about-dark-text {
-            font-size: 24px;
-            line-height: 34px;
-            left: 60px;
-            top: 1280px;
-            width: calc(100% - 120px);
-        }
-        .about-dark-block {
-            height: auto;
-            min-height: 250px;
-        }
-        .about-pink-block {
-            height: auto;
-            min-height: 200px;
-        }
-        .about-pink-text {
-            font-size: 22px;
-            line-height: 32px;
-        }
+    /* НОВЫЙ БЛОК - ОРГАНИЗАЦИИ (АККОРДЕОН) */
+    .orgs-accordion-section {
+        max-width: 1440px;
+        margin: 60px auto;
+        padding: 0 38px;
     }
 
-    @media (max-width: 992px) {
-        .about-project-section {
-            padding: 0 20px;
-        }
-        .about-main-text {
-            font-size: 22px;
-            line-height: 30px;
-            left: 40px;
-            top: 160px;
-            width: calc(100% - 80px);
-        }
-        .about-main-block {
-            width: calc(100% - 40px);
-            left: 20px;
-            min-height: 450px;
-        }
-        .about-left-image {
-            width: 280px;
-            height: 230px;
-            left: 20px;
-            top: 650px;
-        }
-        .about-pink-block {
-            width: calc(100% - 320px);
-            left: 320px;
-            top: 650px;
-            min-height: 230px;
-        }
-        .about-pink-text {
-            font-size: 18px;
-            line-height: 28px;
-        }
-        .about-right-image {
-            width: 280px;
-            height: 230px;
-            left: auto;
-            right: 20px;
-            top: 950px;
-        }
-        .about-dark-block {
-            width: calc(100% - 320px);
-            left: 20px;
-            top: 950px;
-            min-height: 230px;
-        }
-        .about-dark-text {
-            font-size: 18px;
-            line-height: 28px;
-            left: 40px;
-            top: 970px;
-            width: calc(100% - 80px);
-        }
+    .orgs-title {
+        font-size: 48px;
+        font-weight: 700;
+        margin-bottom: 40px;
+        color: #333;
+        text-align: center;
     }
 
-    @media (max-width: 768px) {
-        .about-container {
-            min-height: auto;
-            padding-bottom: 40px;
-        }
-        .about-main-block {
-            position: relative;
-            left: 0;
-            top: 0;
-            width: 100%;
-            min-height: 400px;
-            margin-bottom: 20px;
-        }
-        .about-main-text {
-            position: relative;
-            left: 0;
-            top: 0;
-            padding: 40px 20px;
-            width: 100%;
-            font-size: 18px;
-            line-height: 26px;
-        }
-        .about-left-image {
-            position: relative;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 300px;
-            height: 200px;
-            margin: 20px auto;
-        }
-        .about-pink-block {
-            position: relative;
-            left: 0;
-            top: 0;
-            width: 100%;
-            min-height: 150px;
-            margin: 20px 0;
-        }
-        .about-pink-text {
-            font-size: 16px;
-            line-height: 24px;
-        }
-        .about-right-image {
-            position: relative;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 300px;
-            height: 200px;
-            margin: 20px auto;
-        }
-        .about-dark-block {
-            position: relative;
-            left: 0;
-            top: 0;
-            width: 100%;
-            min-height: 180px;
-            margin: 20px 0;
-        }
-        .about-dark-text {
-            position: relative;
-            left: 0;
-            top: 0;
-            padding: 30px 20px;
-            width: 100%;
-            font-size: 16px;
-            line-height: 24px;
-        }
+    .orgs-subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 50px;
+        font-size: 18px;
     }
 
-    /* Стили для нижних блоков */
+    /* Аккордеон */
+    .org-accordion {
+        background: #FFF6F0;
+        border-radius: 40px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .org-accordion-item {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .org-accordion-item:last-child {
+        border-bottom: none;
+    }
+
+    .org-accordion-header {
+        padding: 25px 30px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #FFF6F0;
+    }
+
+    .org-accordion-header:hover {
+        background: #FFE4E1;
+    }
+
+    .org-accordion-header.active {
+        background: #FFD7D3;
+    }
+
+    .org-avatar-small {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #FFA59D;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .org-avatar-small img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .org-avatar-small .placeholder {
+        font-size: 30px;
+    }
+
+    .org-header-info {
+        flex: 1;
+    }
+
+    .org-header-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 5px;
+    }
+
+    .org-header-stats {
+        display: flex;
+        gap: 20px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .org-header-stats span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .org-accordion-icon {
+        font-size: 24px;
+        color: #FF6F61;
+        transition: transform 0.3s ease;
+    }
+
+    .org-accordion-header.active .org-accordion-icon {
+        transform: rotate(180deg);
+    }
+
+    .org-accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease-out;
+        background: white;
+    }
+
+    .org-accordion-content.active {
+        max-height: 500px;
+        transition: max-height 0.4s ease-in;
+    }
+
+    .org-detail-content {
+        padding: 30px;
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .org-detail-left {
+        flex: 0 0 120px;
+        text-align: center;
+    }
+
+    .org-detail-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-bottom: 10px;
+        background: #FFA59D;
+    }
+
+    .org-detail-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .org-detail-right {
+        flex: 1;
+    }
+
+    .org-detail-description {
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+
+    .org-detail-contact {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        padding: 15px 0;
+        border-top: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+    }
+
+    .org-contact-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .org-detail-stats {
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .org-stat {
+        text-align: center;
+    }
+
+    .org-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #FF6F61;
+    }
+
+    .org-stat-label {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .btn-org-profile {
+        display: inline-block;
+        background: #5D4037;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 30px;
+        text-decoration: none;
+        transition: all 0.3s;
+        margin-top: 10px;
+    }
+
+    .btn-org-profile:hover {
+        background: #4a322a;
+        transform: scale(1.02);
+        color: white;
+    }
+
+    .org-rating {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #FFD700;
+    }
+
+    /* Остальные блоки */
     .info-section {
         position: relative;
         z-index: 2;
@@ -475,12 +524,6 @@
         margin: 0 auto;
     }
 
-    .org-title {
-        font-size: 48px;
-        font-weight: 700;
-        margin-bottom: 20px;
-    }
-
     .org-text {
         font-size: 20px;
         margin-bottom: 40px;
@@ -503,19 +546,97 @@
         color: #000;
     }
 
-    @media (max-width: 768px) {
-        .about-block, .org-block {
-            padding: 40px 20px;
-        }
-        .about-title, .org-title {
-            font-size: 36px;
-        }
-        .info-card h3 {
-            font-size: 26px;
-        }
+    .empty-orgs {
+        text-align: center;
+        padding: 60px;
+        background: #FFF6F0;
+        border-radius: 40px;
+        color: #666;
     }
-</style>
 
+    /* Адаптивность */
+    @media (max-width: 1200px) {
+        .about-main-text { font-size: 28px; line-height: 38px; left: 80px; top: 180px; width: calc(100% - 160px); }
+        .about-main-block { height: auto; min-height: 500px; }
+        .about-dark-text { font-size: 24px; line-height: 34px; left: 60px; top: 1280px; width: calc(100% - 120px); }
+        .about-dark-block { height: auto; min-height: 250px; }
+        .about-pink-block { height: auto; min-height: 200px; }
+        .about-pink-text { font-size: 22px; line-height: 32px; }
+        .orgs-title { font-size: 36px; }
+    }
+
+    @media (max-width: 992px) {
+        .about-project-section { padding: 0 20px; }
+        .about-main-text { font-size: 22px; line-height: 30px; left: 40px; top: 160px; width: calc(100% - 80px); }
+        .about-main-block { width: calc(100% - 40px); left: 20px; min-height: 450px; }
+        .about-left-image { width: 280px; height: 230px; left: 20px; top: 650px; }
+        .about-pink-block { width: calc(100% - 320px); left: 320px; top: 650px; min-height: 230px; }
+        .about-pink-text { font-size: 18px; line-height: 28px; }
+        .about-right-image { width: 280px; height: 230px; left: auto; right: 20px; top: 950px; }
+        .about-dark-block { width: calc(100% - 320px); left: 20px; top: 950px; min-height: 230px; }
+        .about-dark-text { font-size: 18px; line-height: 28px; left: 40px; top: 970px; width: calc(100% - 80px); }
+        .orgs-accordion-section { padding: 0 20px; }
+        .org-header-name { font-size: 20px; }
+        .org-header-stats { flex-wrap: wrap; gap: 10px; }
+    }
+
+    @media (max-width: 768px) {
+        .about-container { min-height: auto; padding-bottom: 40px; }
+        .about-main-block { position: relative; left: 0; top: 0; width: 100%; min-height: 400px; margin-bottom: 20px; }
+        .about-main-text { position: relative; left: 0; top: 0; padding: 40px 20px; width: 100%; font-size: 18px; line-height: 26px; }
+        .about-left-image { position: relative; left: 0; top: 0; width: 100%; max-width: 300px; height: 200px; margin: 20px auto; }
+        .about-pink-block { position: relative; left: 0; top: 0; width: 100%; min-height: 150px; margin: 20px 0; }
+        .about-pink-text { font-size: 16px; line-height: 24px; }
+        .about-right-image { position: relative; left: 0; top: 0; width: 100%; max-width: 300px; height: 200px; margin: 20px auto; }
+        .about-dark-block { position: relative; left: 0; top: 0; width: 100%; min-height: 180px; margin: 20px 0; }
+        .about-dark-text { position: relative; left: 0; top: 0; padding: 30px 20px; width: 100%; font-size: 16px; line-height: 24px; }
+        .about-block, .org-block { padding: 40px 20px; }
+        .about-title, .orgs-title { font-size: 32px; }
+        .info-card h3 { font-size: 26px; }
+        .main-title { font-size: 48px; }
+        .join-text { font-size: 32px; }
+        .join-block { padding: 15px 30px; }
+        .hero-content { padding: 40px 20px; }
+        .white-card { padding: 30px; }
+        .org-accordion-header { padding: 15px 20px; gap: 12px; }
+        .org-avatar-small { width: 45px; height: 45px; }
+        .org-header-name { font-size: 16px; }
+        .org-header-stats { font-size: 11px; }
+        .org-detail-content { flex-direction: column; text-align: center; }
+        .org-detail-left { margin: 0 auto; }
+        .org-detail-contact { justify-content: center; }
+        .org-detail-stats { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+        .main-title { font-size: 32px; }
+        .join-text { font-size: 24px; }
+        .join-block { padding: 12px 24px; }
+        .white-card { padding: 20px; border-radius: 40px; }
+        .hero-content { padding: 20px 15px; }
+        .orgs-title { font-size: 24px; }
+        .org-accordion-header { padding: 12px 15px; }
+        .org-header-info { min-width: 0; }
+        .org-header-name { font-size: 14px; }
+        .org-header-stats { font-size: 10px; }
+        .org-detail-content { padding: 20px; }
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .org-accordion-item {
+        animation: fadeInUp 0.4s ease forwards;
+        opacity: 0;
+    }
+    .org-accordion-item:nth-child(1) { animation-delay: 0.05s; }
+    .org-accordion-item:nth-child(2) { animation-delay: 0.1s; }
+    .org-accordion-item:nth-child(3) { animation-delay: 0.15s; }
+    .org-accordion-item:nth-child(4) { animation-delay: 0.2s; }
+    .org-accordion-item:nth-child(5) { animation-delay: 0.25s; }
+</style>
 
 <div class="hero-section">
     <div class="hero-content">
@@ -526,7 +647,7 @@
                         Твоя забота: рядом с теми, кто нуждается
                     </div>
                     {% if 'user_id' not in session %}
-                    <a href="/register" class="join-block">
+                    <a href="/choose-role" class="join-block">
                         <span class="join-text">присоединиться</span>
                     </a>
                     {% endif %}
@@ -566,37 +687,138 @@
 <div class="about-project-section">
     <div class="about-container">
         <div class="about-main-block"></div>
-
         <div class="about-main-text">
             «МЫ РЯДОМ» — это цифровая платформа для адресной и прозрачной помощи в городе Воронеж.
             Проект объединяет людей, готовых поддержать друг друга в нужный момент, и тех, кому эта поддержка действительно необходима. Каждая помощь становится видимой, а доверие — основой взаимодействия. Главные ценности проекта — забота, открытость, ответственность и участие. Мы верим, что сильное сообщество строится на простых поступках. Быть рядом — значит не оставаться в стороне. Присоединяйся к «МЫ РЯДОМ» и делай город добрее.
         </div>
-
         <div class="about-left-image"></div>
-
         <div class="about-pink-block">
             <div class="about-pink-text">
                 Данные о подопечных формируются при поддержке партнёрских организаций, которые работают на местах и сопровождают весь процесс — от оформления необходимых документов до проведения фотосъёмки.
             </div>
         </div>
-
         <div class="about-right-image"></div>
-<div class="about-dark-text">
+        <div class="about-dark-text">
             Каждый подопечный проходит проверку, а после верификации дополнительно подтверждается для обеспечения достоверности информации.
         </div>
-        <div class="about-dark-block">
+        <div class="about-dark-block"></div>
+    </div>
+</div>
 
+<!-- НОВЫЙ БЛОК: ОРГАНИЗАЦИИ (АККОРДЕОН) -->
+<div id="organizations" class="orgs-accordion-section">
+    <h2 class="orgs-title">🤝 Наши партнеры-организации</h2>
+    <p class="orgs-subtitle">Проверенные НКО, фонды и приюты, которые помогают нуждающимся</p>
+
+    {% if organizations %}
+    <div class="org-accordion">
+        {% for org in organizations %}
+        <div class="org-accordion-item">
+            <div class="org-accordion-header" onclick="toggleAccordion(this)">
+                <div class="org-avatar-small">
+                    {% if org.photo %}
+                        <img src="/{{ org.photo }}" alt="{{ org.name }}">
+                    {% else %}
+                        <div class="placeholder">🏢</div>
+                    {% endif %}
+                </div>
+                <div class="org-header-info">
+                    <div class="org-header-name">{{ org.name }}</div>
+                    <div class="org-header-stats">
+                        <span>👥 {{ org.needies_count }} подопечных</span>
+                        <span>💰 {{ "%.0f"|format(org.total_funds) }} ₽ собрано</span>
+                        <span class="org-rating">⭐ {{ "%.1f"|format(org.rating) }}</span>
+                    </div>
+                </div>
+                <div class="org-accordion-icon">▼</div>
+            </div>
+            <div class="org-accordion-content">
+                <div class="org-detail-content">
+                    <div class="org-detail-left">
+                        <div class="org-detail-avatar">
+                            {% if org.photo %}
+                                <img src="/{{ org.photo }}" alt="{{ org.name }}">
+                            {% else %}
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 40px;">🏢</div>
+                            {% endif %}
+                        </div>
+                        <div class="org-rating" style="justify-content: center; margin-top: 10px;">
+                            ⭐ {{ "%.1f"|format(org.rating) }}
+                        </div>
+                    </div>
+                    <div class="org-detail-right">
+                        {% if org.organization_description %}
+                        <div class="org-detail-description">
+                            {{ org.organization_description }}
+                        </div>
+                        {% endif %}
+
+                        <div class="org-detail-contact">
+                            {% if org.email %}
+                            <div class="org-contact-item">📧 {{ org.email }}</div>
+                            {% endif %}
+                            {% if org.phone %}
+                            <div class="org-contact-item">📞 {{ org.phone }}</div>
+                            {% endif %}
+                            <div class="org-contact-item">📅 На сайте с {{ org.created_at[:10] if org.created_at else 'недавно' }}</div>
+                        </div>
+
+                        <div class="org-detail-stats">
+                            <div class="org-stat">
+                                <div class="org-stat-value">{{ org.needies_count }}</div>
+                                <div class="org-stat-label">подопечных</div>
+                            </div>
+                            <div class="org-stat">
+                                <div class="org-stat-value">{{ org.reports_count or 0 }}</div>
+                                <div class="org-stat-label">отчетов</div>
+                            </div>
+                            <div class="org-stat">
+                                <div class="org-stat-value">{{ org.donors_count or 0 }}</div>
+                                <div class="org-stat-label">жертвователей</div>
+                            </div>
+                            <div class="org-stat">
+                                <div class="org-stat-value">{{ org.completed_collections or 0 }}</div>
+                                <div class="org-stat-label">завершенных сборов</div>
+                            </div>
+                        </div>
+
+                        <a href="{{ url_for('organization_profile', org_id=org.id) }}" class="btn-org-profile">
+                            Перейти в профиль организации →
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-
-
+        {% endfor %}
     </div>
+    {% else %}
+    <div class="empty-orgs">
+        <div style="font-size: 48px; margin-bottom: 15px;">🏢</div>
+        <h3>Пока нет зарегистрированных организаций</h3>
+        <p>Станьте первой организацией, которая поможет нуждающимся!</p>
+        <a href="{{ url_for('register_organization') }}" class="org-button" style="margin-top: 20px; display: inline-block;">Стать партнером</a>
+    </div>
+    {% endif %}
 </div>
 
-<div id="organizations">
-    <div class="org-block">
-        <div class="org-title">Организации</div>
-        <div class="org-text">Мы сотрудничаем с проверенными НКО, фондами и приютами. Присоединяйтесь к нам, чтобы делать добрые дела вместе!</div>
-        <a href="{{ url_for('register_organization') }}" class="org-button">Стать партнером</a>
-    </div>
-</div>
+<script>
+    function toggleAccordion(header) {
+        // Закрываем другие открытые аккордеоны
+        const allHeaders = document.querySelectorAll('.org-accordion-header');
+        const allContents = document.querySelectorAll('.org-accordion-content');
+
+        const isActive = header.classList.contains('active');
+
+        // Закрываем все
+        allHeaders.forEach(h => h.classList.remove('active'));
+        allContents.forEach(c => c.classList.remove('active'));
+
+        // Открываем текущий, если он не был активен
+        if (!isActive) {
+            header.classList.add('active');
+            const content = header.nextElementSibling;
+            if (content) content.classList.add('active');
+        }
+    }
+</script>
 {% endblock %}

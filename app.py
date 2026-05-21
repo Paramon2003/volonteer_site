@@ -520,7 +520,43 @@ def logout():
 # --- Главная страница ---
 @app.route('/')
 def index():
-    return render_template('index.html')
+    """Главная страница"""
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+
+        # Получаем все подтвержденные организации
+        c.execute('''SELECT u.id, u.name, u.email, u.phone, u.photo, u.organization_description, 
+                            u.rating, u.created_at, u.is_verified,
+                            (SELECT COUNT(*) FROM needies WHERE organization_id = u.id AND status = 'approved') as needies_count,
+                            (SELECT COALESCE(SUM(funds_collected), 0) FROM needies WHERE organization_id = u.id) as total_funds,
+                            (SELECT COUNT(*) FROM reports WHERE user_id = u.id AND status = 'approved') as reports_count,
+                            (SELECT COUNT(DISTINCT d.user_id) FROM donations d JOIN needies n ON d.needy_id = n.id WHERE n.organization_id = u.id) as donors_count,
+                            (SELECT COUNT(*) FROM needies WHERE organization_id = u.id AND collection_status = 'completed') as completed_collections
+                     FROM users u
+                     WHERE u.role = 'organization' AND u.is_verified = 1
+                     ORDER BY u.rating DESC, needies_count DESC''')
+        organizations = c.fetchall()
+
+        orgs_list = []
+        for org in organizations:
+            orgs_list.append({
+                'id': org[0],
+                'name': org[1],
+                'email': org[2],
+                'phone': org[3],
+                'photo': org[4],
+                'organization_description': org[5],
+                'rating': org[6] or 0,
+                'created_at': org[7],
+                'is_verified': org[8],
+                'needies_count': org[9] or 0,
+                'total_funds': org[10] or 0,
+                'reports_count': org[11] or 0,
+                'donors_count': org[12] or 0,
+                'completed_collections': org[13] or 0
+            })
+
+    return render_template('index.html', organizations=orgs_list)
 
 
 # --- Личный кабинет ---
@@ -1578,25 +1614,33 @@ def admin_reports():
 def approve_report(report_id):
     """Одобрение отчета администратором"""
     if 'user_id' not in session:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Unauthorized'})
         return redirect(url_for('login'))
 
     with sqlite3.connect(DB_NAME) as conn:
         c = conn.cursor()
 
-        # Проверяем права админа
         c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
-        if c.fetchone()[0] != 'admin':
+        user = c.fetchone()
+        if not user or user[0] != 'admin':
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Access denied'})
             flash('Доступ запрещен')
             return redirect(url_for('index'))
 
-        # Получаем информацию об отчете
         c.execute('''SELECT r.needy_id, r.user_id, u.name 
                      FROM reports r
                      JOIN users u ON r.user_id = u.id
                      WHERE r.id = ?''', (report_id,))
         report_info = c.fetchone()
 
-        # Одобряем отчет
+        if not report_info:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Report not found'})
+            flash('Отчет не найден')
+            return redirect(url_for('admin_reports'))
+
         c.execute('''UPDATE reports 
                      SET status = 'approved',
                          approved_by = ?,
@@ -1604,14 +1648,12 @@ def approve_report(report_id):
                      WHERE id = ?''',
                   (session['user_id'], datetime.now().isoformat(), report_id))
 
-        # Начисляем рейтинг организации
         c.execute('''UPDATE users 
-                     SET rating = rating + 0.5
+                     SET rating = COALESCE(rating, 0) + 0.5
                      WHERE id = ?''', (report_info[1],))
 
         conn.commit()
 
-        # Уведомляем организацию
         create_notification(
             report_info[1],
             'report_approved',
@@ -1620,9 +1662,45 @@ def approve_report(report_id):
             url_for('needy_reports', needy_id=report_info[0])
         )
 
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True})
+
         flash('Отчет одобрен')
         return redirect(url_for('admin_reports'))
 
+
+@app.route('/admin/reject_report/<int:report_id>', methods=['POST'])
+def reject_report(report_id):
+    """Отклонение отчета администратором"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
+        c.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        if not user or user[0] != 'admin':
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+        data = request.get_json()
+        reason = data.get('reason', '') if data else ''
+
+        c.execute('''SELECT user_id, needy_id FROM reports WHERE id = ?''', (report_id,))
+        report = c.fetchone()
+
+        if report:
+            c.execute('''UPDATE reports SET status = 'rejected' WHERE id = ?''', (report_id,))
+            conn.commit()
+
+            create_notification(
+                report[0],
+                'report_rejected',
+                '❌ Отчет отклонен',
+                f'Ваш отчет был отклонен. Причина: {reason if reason else "не соответствует требованиям"}',
+                url_for('needy_reports', needy_id=report[1])
+            )
+
+        return jsonify({'success': True})
 
 
 @app.route('/update_profile', methods=['POST'])

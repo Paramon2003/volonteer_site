@@ -653,12 +653,10 @@
 
 <div class="needy-profile-page">
     <div class="profile-container">
-        <!-- Заголовок -->
         <div class="profile-title-block">
             <span>профиль нуждающегося</span>
         </div>
 
-        <!-- Фото -->
         <div class="needy-photo">
             {% if needy[3] %}
                 <img src="/{{ needy[3] }}" alt="{{ needy[1] }}">
@@ -667,9 +665,7 @@
             {% endif %}
         </div>
 
-        <!-- Основной информационный блок -->
         <div class="info-main-block">
-            <!-- Имя и тег (поменяли местами) -->
             <div class="name-and-tag">
                 <div class="needy-name">{{ needy[1] }}</div>
                 <div class="category-badge">
@@ -686,7 +682,6 @@
                 </div>
             </div>
 
-            <!-- Блок сбора средств -->
             <div class="fundraising-block">
                 <div class="fundraising-title">{{ needy[9] or 'Продуктовая корзина' }}</div>
                 <div class="progress-container">
@@ -700,17 +695,16 @@
                 </div>
             </div>
 
-            <!-- Блок "Уже помогают" -->
             <div class="helpers-block">
                 <div class="helpers-info">
                     <h4>Уже помогают</h4>
-                    <div class="helpers-count" id="helpersCount">{{ needy.helpers_count or 0 }} человек</div>
+                    <div class="helpers-count" id="helpersCount">{{ needy[14] or 0 }} человек</div>
                 </div>
-                <div class="helpers-avatars" id="helpersAvatars">
+                <div class="helpers-avatars">
                     <div class="avatar-circle">👤</div>
                     <div class="avatar-circle">👤</div>
                     <div class="avatar-circle">👤</div>
-                    <div class="avatar-circle more">+{{ (needy.helpers_count or 0) - 3 if (needy.helpers_count or 0) > 3 else 0 }}</div>
+                    <div class="avatar-circle more">+{{ (needy[14] or 0) - 3 if (needy[14] or 0) > 3 else 0 }}</div>
                 </div>
                 <div class="reports-link" onclick="location.href='{{ url_for('needy_reports', needy_id=needy[0]) }}'">
                     <span>Отчеты</span>
@@ -718,25 +712,19 @@
                 </div>
             </div>
 
-            <!-- Описание -->
             <div class="description-block">
                 <div class="description-text">
                     {{ needy[4] or 'Описание отсутствует' }}
                 </div>
             </div>
 
-            <!-- Кнопка помочь -->
             <div class="help-button">
-    {% if needy[12] == 'completed' %}
-        <button class="btn-help completed" disabled>
-            <span>✅ Сбор завершен</span>
-        </button>
-    {% else %}
-        <button class="btn-help" onclick="openPaymentModal()">
-            <span>❤️ Помочь</span>
-        </button>
-    {% endif %}
-</div>
+                {% if needy[11] == 'completed' %}
+                    <button class="btn-help completed" disabled>✅ Сбор завершен</button>
+                {% else %}
+                    <button class="btn-help" onclick="openPaymentModal()">❤️ Помочь</button>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -802,44 +790,28 @@
             subscriptionBtn.classList.add('active');
             oneTimeBtn.classList.remove('active');
             currencySpan.textContent = '₽/мес';
-            // СБП недоступна при подписке - блокируем
-            sbpMethod.classList.add('disabled');
-            // Если был выбран СБП, переключаем на карту
-            if (selectedPaymentMethod === 'sbp') {
-                selectPaymentMethod('card');
-            }
+            if (sbpMethod) sbpMethod.classList.add('disabled');
+            if (selectedPaymentMethod === 'sbp') selectPaymentMethod('card');
         } else {
             subscriptionBtn.classList.remove('active');
             oneTimeBtn.classList.add('active');
             currencySpan.textContent = '₽';
-            // СБП доступна при разовом платеже
-            sbpMethod.classList.remove('disabled');
+            if (sbpMethod) sbpMethod.classList.remove('disabled');
         }
 
-        // Обновляем текст кнопки
         const submitBtn = document.getElementById('submitPaymentBtn');
-        if (type === 'subscription') {
-            submitBtn.textContent = 'подписаться';
-        } else {
-            submitBtn.textContent = 'перевести';
-        }
+        if (submitBtn) submitBtn.textContent = type === 'subscription' ? 'подписаться' : 'перевести';
     }
 
     function selectPaymentMethod(method) {
-        // Проверяем, не заблокирован ли метод СБП
         if (method === 'sbp') {
             const sbpMethod = document.getElementById('sbpMethod');
-            if (sbpMethod.classList.contains('disabled')) {
-                return;
-            }
+            if (sbpMethod && sbpMethod.classList.contains('disabled')) return;
         }
-
         selectedPaymentMethod = method;
-        // Визуальное выделение
-        document.querySelectorAll('.payment-method-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        document.querySelector(`.payment-method-card[data-method="${method}"]`).classList.add('selected');
+        document.querySelectorAll('.payment-method-card').forEach(card => card.classList.remove('selected'));
+        const selectedCard = document.querySelector(`.payment-method-card[data-method="${method}"]`);
+        if (selectedCard) selectedCard.classList.add('selected');
     }
 
     function openPaymentModal() {
@@ -853,28 +825,21 @@
             alert('Пожалуйста, введите сумму от 50 ₽');
             return;
         }
-
         const isSubscription = (currentPaymentType === 'subscription') ? 1 : 0;
 
-        // Отправка AJAX запроса для пожертвования
         fetch(`/donate/{{ needy[0] }}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: `amount=${amount}&subscription=${isSubscription}&ajax=1`
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Закрываем модалку
                 bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                // Обновляем данные на странице
                 updateDonationUI(data);
-                // Показываем уведомление
                 showNotification('Спасибо за помощь! ❤️', 'success');
             } else {
-                showNotification('Ошибка при обработке платежа', 'error');
+                showNotification(data.error || 'Ошибка при обработке платежа', 'error');
             }
         })
         .catch(error => {
@@ -884,141 +849,68 @@
     }
 
     function updateDonationUI(data) {
-    // Обновляем сумму
-    const fundsCollectedElem = document.querySelector('.funds-stats span:first-child');
-    if (fundsCollectedElem) {
-        fundsCollectedElem.textContent = Math.round(data.funds_collected) + ' ₽';
-    }
+        const fundsCollectedElem = document.querySelector('.funds-stats span:first-child');
+        if (fundsCollectedElem) fundsCollectedElem.textContent = Math.round(data.funds_collected) + ' ₽';
 
-    // Обновляем прогресс-бар
-    const progressPercent = (data.funds_collected / data.goal) * 100;
-    const progressFill = document.getElementById('progressFill');
-    if (progressFill) {
-        progressFill.style.width = Math.min(progressPercent, 100) + '%';
-    }
+        const progressPercent = (data.funds_collected / data.goal) * 100;
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) progressFill.style.width = Math.min(progressPercent, 100) + '%';
 
-    // Обновляем количество помощников
-    const helpersCountElem = document.getElementById('helpersCount');
-    if (helpersCountElem && data.helpers_count) {
-        helpersCountElem.textContent = data.helpers_count + ' ' +
-            getPeopleWord(data.helpers_count);
-    }
+        const helpersCountElem = document.getElementById('helpersCount');
+        if (helpersCountElem && data.helpers_count) {
+            helpersCountElem.textContent = data.helpers_count + ' человек';
+        }
 
-    // Проверяем достижение цели
-    if (data.funds_collected >= data.goal && data.status === 'completed') {
-        showConfetti();
-        showGoalReachedMessage();
-    }
+        if (data.funds_collected >= data.goal && data.status === 'completed') {
+            showConfetti();
+            showGoalReachedMessage();
+        }
 
-    // Показываем полученные достижения
-    if (data.badge_earned && data.badge_earned.length > 0) {
-        showBadgeNotification(data.badge_earned);
+        if (data.badge_earned && data.badge_earned.length > 0) {
+            showBadgeNotification(data.badge_earned);
+        }
     }
-}
-
 
     function showNotification(message, type) {
         const notification = document.createElement('div');
         notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-custom`;
-        notification.style.position = 'fixed';
-        notification.style.top = '100px';
-        notification.style.left = '50%';
-        notification.style.transform = 'translateX(-50%)';
-        notification.style.zIndex = '9999';
-        notification.style.minWidth = '300px';
-        notification.style.textAlign = 'center';
-        notification.style.borderRadius = '16px';
-        notification.style.padding = '12px 24px';
+        notification.style.cssText = 'position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px; text-align: center; border-radius: 16px; padding: 12px 24px;';
         notification.innerHTML = message + '<button type="button" class="btn-close" style="float: right;" onclick="this.parentElement.remove()"></button>';
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 3000);
     }
 
-    function scrollToReports() {
-        showNotification('Скоро здесь будут отчеты о помощи!', 'info');
+    function showConfetti() {
+        if (typeof confetti === 'function') {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            setTimeout(() => {
+                confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } });
+                confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } });
+            }, 200);
+        }
     }
 
-    // Инициализация
+    function showGoalReachedMessage() {
+        const message = document.createElement('div');
+        message.innerHTML = `<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #FF6F61, #FF8E83); color: white; padding: 30px 50px; border-radius: 60px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); z-index: 10000; text-align: center;"><h2 style="font-size: 36px; margin-bottom: 10px;">🎉 Цель достигнута!</h2><p style="font-size: 20px;">Спасибо за вашу помощь!</p></div>`;
+        document.body.appendChild(message);
+        setTimeout(() => message.remove(), 4000);
+    }
+
+    function showBadgeNotification(badges) {
+        badges.forEach((badge, index) => {
+            setTimeout(() => {
+                const notification = document.createElement('div');
+                notification.innerHTML = `<div style="position: fixed; bottom: 20px; right: 20px; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999; border-left: 5px solid #FF6F61;"><div style="display: flex; align-items: center; gap: 15px;"><span style="font-size: 40px;">${badge}</span><div><h4 style="margin: 0; color: #333;">Новое достижение!</h4><p style="margin: 5px 0 0; color: #666;">${badge.split(' ')[1] || badge}</p></div></div></div>`;
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 5000);
+            }, index * 1000);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         selectPaymentMethod('card');
         setPaymentType('one-time');
     });
-
-    function showConfetti() {
-    if (typeof confetti === 'function') {
-        confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
-        setTimeout(() => {
-            confetti({
-                particleCount: 50,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 }
-            });
-            confetti({
-                particleCount: 50,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 }
-            });
-        }, 200);
-    }
-}
-
-    function getPeopleWord(count) {
-    const mod10 = count % 10;
-    const mod100 = count % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'человек';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'человека';
-    return 'человек';
-}
-
-// Показ уведомления о достижении цели
-function showGoalReachedMessage() {
-    const message = document.createElement('div');
-    message.className = 'goal-reached-message';
-    message.innerHTML = `
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    background: linear-gradient(135deg, #FF6F61, #FF8E83);
-                    color: white; padding: 30px 50px; border-radius: 60px;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.2); z-index: 10000;
-                    text-align: center; animation: bounceIn 0.5s ease;">
-            <h2 style="font-size: 36px; margin-bottom: 10px;">🎉 Цель достигнута!</h2>
-            <p style="font-size: 20px;">Спасибо за вашу помощь!</p>
-        </div>
-    `;
-    document.body.appendChild(message);
-    setTimeout(() => message.remove(), 4000);
-}
-
-// Показ полученных достижений
-function showBadgeNotification(badges) {
-    badges.forEach((badge, index) => {
-        setTimeout(() => {
-            const notification = document.createElement('div');
-            notification.className = 'badge-notification';
-            notification.innerHTML = `
-                <div style="position: fixed; bottom: 20px; right: 20px;
-                            background: white; padding: 20px; border-radius: 20px;
-                            box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 9999;
-                            animation: slideInRight 0.5s ease;
-                            border-left: 5px solid #FF6F61;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span style="font-size: 40px;">${badge}</span>
-                        <div>
-                            <h4 style="margin: 0; color: #333;">Новое достижение!</h4>
-                            <p style="margin: 5px 0 0; color: #666;">${badge.split(' ')[1] || badge}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 5000);
-        }, index * 1000);
-    });
-}
 </script>
 {% endblock %}
